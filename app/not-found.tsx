@@ -1,8 +1,6 @@
-import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Compass } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
+import { Compass } from 'lucide-react';
+import { NotFoundActions } from '@/components/not-found-actions';
 
 export default function NotFound() {
   return (
@@ -39,22 +37,7 @@ export default function NotFound() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            variant="outline"
-            asChild
-          >
-            <Link href="#" onClick={() => window.history.back()}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Go back
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/">
-              Go to dashboard
-            </Link>
-          </Button>
-        </div>
+        <NotFoundActions />
       </div>
     </div>
   );
