@@ -52,4 +52,11 @@ export interface BillingInfo {
   planName: string;
   nextInvoiceDate?: string;
   amount?: number;
+  usage?: {
+    eventsIngested: number;
+    exportsCreated: number;
+    webhooksActive: number;
+    periodStart: string;
+    periodEnd: string;
+  };
 }

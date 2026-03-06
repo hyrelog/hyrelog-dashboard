@@ -361,6 +361,7 @@ model Company {
   provisioning ApiProvisioning?
   auditLogs    AuditLog[]
   stripeEvents StripeEvent[]
+  usagePeriods UsagePeriod[]
 
   @@index([apiCompanyId])
   @@map("companies")
@@ -685,11 +686,13 @@ model Subscription {
 
   interval          PriceInterval?
   trialEndsAt       DateTime?
+  currentPeriodStart DateTime?
   currentPeriodEnd  DateTime?
   cancelAtPeriodEnd Boolean        @default(false)
 
   stripeCustomerId     String? @unique
   stripeSubscriptionId String? @unique
+  stripePriceId        String?
 
   overrideEntitlements Json?
 
@@ -705,6 +708,26 @@ model Subscription {
   @@index([planId])
   @@index([status])
   @@map("subscriptions")
+}
+
+model UsagePeriod {
+  id         String   @id @default(uuid())
+  companyId  String
+  periodStart DateTime
+  periodEnd   DateTime
+
+  eventsIngested  Int @default(0)
+  exportsCreated  Int @default(0)
+  webhooksActive  Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, periodStart])
+  @@index([companyId])
+  @@map("usage_periods")
 }
 
 model SubscriptionAddOn {

@@ -15,7 +15,8 @@ import {
   User,
   HelpCircle,
   Globe,
-  BookOpen
+  BookOpen,
+  Activity
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -47,6 +48,11 @@ const navSections: {
         title: 'Dashboard',
         href: '/',
         icon: LayoutDashboard
+      },
+      {
+        title: 'Events',
+        href: '/events',
+        icon: Activity
       }
     ]
   },
@@ -57,6 +63,16 @@ const navSections: {
         title: 'Workspaces',
         href: '/workspaces',
         icon: FolderKanban
+      },
+      {
+        title: 'Exports',
+        href: '/exports',
+        icon: BookOpen
+      },
+      {
+        title: 'Webhooks',
+        href: '/webhooks',
+        icon: Activity
       }
     ]
   },

@@ -143,3 +143,101 @@ export async function restoreWorkspace(
   );
   return data;
 }
+
+export interface DashboardEventsParams {
+  limit?: number;
+  cursor?: string;
+  from?: string;
+  to?: string;
+  category?: string;
+  action?: string;
+  projectId?: string;
+  workspaceId?: string;
+}
+
+export interface DashboardEventsResponse {
+  events: Array<{
+    id: string;
+    timestamp: string;
+    category: string;
+    action: string;
+    actorId?: string | null;
+    actorEmail?: string | null;
+    actorRole?: string | null;
+    resourceType?: string | null;
+    resourceId?: string | null;
+    metadata: unknown;
+    traceId?: string | null;
+    ipAddress?: string | null;
+    geo?: string | null;
+    userAgent?: string | null;
+  }>;
+  nextCursor: string | null;
+}
+
+export async function getDashboardEvents(
+  params: DashboardEventsParams,
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardEventsResponse> {
+  const search = new URLSearchParams();
+  if (params.limit != null) search.set('limit', String(params.limit));
+  if (params.cursor) search.set('cursor', params.cursor);
+  if (params.from) search.set('from', params.from);
+  if (params.to) search.set('to', params.to);
+  if (params.category) search.set('category', params.category);
+  if (params.action) search.set('action', params.action);
+  if (params.projectId) search.set('projectId', params.projectId);
+  if (params.workspaceId) search.set('workspaceId', params.workspaceId);
+  const q = search.toString();
+  const path = `${DASHBOARD_PREFIX}/events${q ? `?${q}` : ''}`;
+  const { data } = await hyrelogRequest<DashboardEventsResponse>(path, {
+    actor: { ...actor, companyId: actor.companyId },
+  });
+  return data;
+}
+
+export interface DashboardExportsResponse {
+  jobs: Array<{
+    id: string;
+    status: string;
+    source: string;
+    format: string;
+    rowLimit: string;
+    rowsExported: string;
+    createdAt: string;
+    finishedAt?: string;
+    errorCode?: string | null;
+  }>;
+}
+
+export async function getDashboardExports(
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardExportsResponse> {
+  const { data } = await hyrelogRequest<DashboardExportsResponse>(
+    `${DASHBOARD_PREFIX}/exports`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export interface DashboardWebhooksResponse {
+  webhooks: Array<{
+    id: string;
+    url: string;
+    status: string;
+    events: string[];
+    workspaceId: string;
+    projectId?: string | null;
+    createdAt: string;
+  }>;
+}
+
+export async function getDashboardWebhooks(
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardWebhooksResponse> {
+  const { data } = await hyrelogRequest<DashboardWebhooksResponse>(
+    `${DASHBOARD_PREFIX}/webhooks`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}

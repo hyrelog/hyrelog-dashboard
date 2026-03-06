@@ -193,15 +193,24 @@ export function CompanyDashboard({
                   <p className="text-sm text-muted-foreground mb-1">Next invoice</p>
                   <p className="text-lg font-semibold text-foreground">
                     {billingInfo.nextInvoiceDate}
-                    {billingInfo.amount && ` • $${billingInfo.amount}`}
+                    {billingInfo.amount != null && ` • $${billingInfo.amount}`}
+                  </p>
+                </div>
+              )}
+              {billingInfo.usage && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Usage this period</p>
+                  <p className="text-sm text-foreground">
+                    Events: {billingInfo.usage.eventsIngested.toLocaleString()} · Exports: {billingInfo.usage.exportsCreated} · Webhooks: {billingInfo.usage.webhooksActive}
                   </p>
                 </div>
               )}
               <Button
                 variant="outline"
                 className="w-full bg-transparent"
+                asChild
               >
-                Manage subscription
+                <a href="/billing/subscription">Manage subscription</a>
               </Button>
             </CardContent>
           </Card>

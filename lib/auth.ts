@@ -25,6 +25,7 @@ const options = {
       verify: verifyPassword
     },
     autoSignIn: true,
+    // We gate onboarding and post-login flows on emailVerified instead of blocking session creation here.
     requireEmailVerification: false,
     sendResetPassword: async ({ user, url }) => {
       //   await sendResetEmail({
@@ -43,13 +44,13 @@ const options = {
   user: {
     changeEmail: {
       enabled: true,
-      sendChangeEmailVerification: async ({ user, newEmail, url, token }, request) => {
+      sendChangeEmailConfirmation: async ({ user, newEmail, url, token }, request) => {
         // await sendVerificationEmail({
         //   email: newEmail,
         //   otp: token,
         //   name: user.name
         // });
-        console.log('sendChangeEmailVerification', user, newEmail, url, token);
+        console.log('sendChangeEmailConfirmation', user, newEmail, url, token);
       }
     },
     additionalFields: {
