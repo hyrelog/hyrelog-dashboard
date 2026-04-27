@@ -4,7 +4,6 @@
  * in schema.prisma, add one entry here and it will appear everywhere.
  */
 export const DATA_REGION_OPTIONS: { value: string; label: string }[] = [
-  { value: 'APAC', label: 'Asia Pacific' },
   { value: 'AU', label: 'Australia' },
   { value: 'EU', label: 'Europe' },
   { value: 'UK', label: 'United Kingdom' },

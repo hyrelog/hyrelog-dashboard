@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutGrid, FolderKanban, Users, Key, Settings, Plus, Lock } from 'lucide-react';
+import { LayoutGrid, FolderKanban, Users, Key, Settings, Plus, Lock, HelpCircle, CloudUpload, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,11 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import {
@@ -41,7 +46,8 @@ import {
   deleteWorkspaceAction,
   renameKeyAction,
   revokeKeyAction,
-  deleteProjectAction
+  deleteProjectAction,
+  provisionWorkspaceAction
 } from '@/app/(dashboard)/workspaces/[id]/actions';
 import { updateWorkspaceRole, removeWorkspaceMember } from '@/actions/members';
 import { revokeInvite } from '@/actions/invites';
@@ -129,6 +135,34 @@ function RestoreWorkspaceButton({
   );
 }
 
+function ProvisionWorkspaceButton({ workspaceId }: { workspaceId: string }) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  async function handleProvision() {
+    setPending(true);
+    const result = await provisionWorkspaceAction(workspaceId);
+    setPending(false);
+    if (result.ok) {
+      toast.success('Workspace provisioned');
+      router.refresh();
+    } else {
+      toast.error(result.error);
+    }
+  }
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleProvision}
+      disabled={pending}
+      className="mt-2 w-full sm:w-auto"
+    >
+      <CloudUpload className="size-4 mr-1.5" />
+      {pending ? 'Provisioning…' : 'Provision workspace'}
+    </Button>
+  );
+}
+
 interface WorkspaceDetailContentProps {
   /** URL segment (uuid or companySlug-workspaceSlug) for building links. */
   workspaceIdOrSlug: string;
@@ -150,6 +184,10 @@ export function WorkspaceDetailContent({
   };
 
   const baseHref = `/workspaces/${workspaceIdOrSlug}`;
+  const copyValue = async (label: string, value: string) => {
+    await navigator.clipboard.writeText(value);
+    toast.success(`${label} copied`);
+  };
 
   const {
     workspace,
@@ -191,6 +229,68 @@ export function WorkspaceDetailContent({
         <div>
           <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{workspace.name}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{workspace.slug}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <div className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
+              <span className="text-muted-foreground">Company ID</span>
+              <span className="font-mono text-foreground">{payload.companyId}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="ml-1"
+                onClick={() => void copyValue('Company ID', payload.companyId)}
+                aria-label="Copy company ID"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
+              <span className="text-muted-foreground">Workspace ID</span>
+              <span className="font-mono text-foreground">{workspace.id}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="ml-1"
+                onClick={() => void copyValue('Workspace ID', workspace.id)}
+                aria-label="Copy workspace ID"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+            {workspace.company.apiCompanyId && (
+              <div className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
+                <span className="text-muted-foreground">API Company ID</span>
+                <span className="font-mono text-foreground">{workspace.company.apiCompanyId}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-1"
+                  onClick={() => void copyValue('API Company ID', workspace.company.apiCompanyId)}
+                  aria-label="Copy API company ID"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            {workspace.apiWorkspaceId && (
+              <div className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
+                <span className="text-muted-foreground">API Workspace ID</span>
+                <span className="font-mono text-foreground">{workspace.apiWorkspaceId}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-1"
+                  onClick={() => void copyValue('API Workspace ID', workspace.apiWorkspaceId)}
+                  aria-label="Copy API workspace ID"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2 mt-2">
             <Badge variant="secondary">{getDataRegionLabel(effectiveRegion)}</Badge>
             <Badge variant={workspace.status === 'ACTIVE' ? 'default' : 'secondary'}>
@@ -267,10 +367,37 @@ export function WorkspaceDetailContent({
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground font-medium">Provisioning status</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs text-muted-foreground font-medium">Provisioning status</p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    aria-label="What do provisioning statuses mean?"
+                  >
+                    <HelpCircle className="size-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-3 text-sm" align="start">
+                  <p className="font-medium text-foreground mb-2">Provisioning statuses</p>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li>
+                      <strong className="text-foreground">Not provisioned</strong> — This workspace has not yet been synced to the HyreLog API. It is provisioned automatically when the workspace is created (if the API is configured). Until then, you cannot create API keys or send events.
+                    </li>
+                    <li>
+                      <strong className="text-foreground">Active</strong> — This workspace is provisioned in the HyreLog API and can receive events and use API keys.
+                    </li>
+                  </ul>
+                </PopoverContent>
+              </Popover>
+            </div>
             <p className="text-lg font-semibold mt-1">
               {workspace.apiWorkspaceId ? 'Active' : 'Not provisioned'}
             </p>
+            {!workspace.apiWorkspaceId && canAdmin && (
+              <ProvisionWorkspaceButton workspaceId={workspace.id} />
+            )}
           </CardContent>
         </Card>
       </div>

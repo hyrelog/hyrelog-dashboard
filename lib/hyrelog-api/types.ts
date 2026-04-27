@@ -52,3 +52,33 @@ export interface ArchiveWorkspaceResponse {
 export interface RestoreWorkspaceResponse {
   ok: boolean;
 }
+
+export interface CompanyApiKeySummary {
+  id: string;
+  prefix: string;
+  name: string;
+  labels: string[];
+  status: string;
+  ipAllowlist: string[];
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListCompanyApiKeysResponse {
+  items: CompanyApiKeySummary[];
+}
+
+export interface CreateCompanyApiKeyResponse {
+  id: string;
+  apiKey: string;
+  prefix: string;
+  scope: string;
+  status: string;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export type UpdateCompanyApiKeyAllowlistResponse = CompanyApiKeySummary;

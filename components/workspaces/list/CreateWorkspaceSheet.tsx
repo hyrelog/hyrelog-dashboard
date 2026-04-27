@@ -35,7 +35,7 @@ import { DATA_REGION_OPTIONS } from '@/lib/constants/regions';
 import { createWorkspaceAction } from '@/actions/workspaces';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
-type DataRegion = 'US' | 'EU' | 'APAC' | 'UK' | 'AU';
+type DataRegion = 'US' | 'EU' | 'UK' | 'AU';
 
 interface CreateWorkspaceSheetProps {
   companyPreferredRegion: DataRegion | null;
@@ -175,7 +175,7 @@ export function CreateWorkspaceSheet({ companyPreferredRegion }: CreateWorkspace
       const result = await createWorkspaceAction({
         name: trimmedName,
         preferredRegion:
-          preferredRegion && ['US', 'EU', 'APAC', 'UK', 'AU'].includes(preferredRegion)
+          preferredRegion && ['US', 'EU', 'UK', 'AU'].includes(preferredRegion)
             ? (preferredRegion as DataRegion)
             : undefined
       });

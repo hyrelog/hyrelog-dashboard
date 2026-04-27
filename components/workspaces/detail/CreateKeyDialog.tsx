@@ -38,14 +38,18 @@ export function CreateKeyDialog({
   const [createdSecret, setCreatedSecret] = useState<string | null>(null);
 
   function handleOpenChange(isOpen: boolean) {
-    if (!isPending && !createdSecret) {
-      setOpen(isOpen);
-      if (!isOpen) {
-        setName('');
-        setNameError(null);
-      }
+    if (!isOpen) {
+      if (isPending) return;
+      setOpen(false);
+      setName('');
+      setNameError(null);
+      setCreatedSecret(null);
+      return;
     }
-    if (!isOpen) setCreatedSecret(null);
+
+    if (!isPending) {
+      setOpen(true);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {

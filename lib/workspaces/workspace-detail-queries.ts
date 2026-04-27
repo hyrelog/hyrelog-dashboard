@@ -69,7 +69,7 @@ export interface WorkspaceDetailPayload {
     apiWorkspaceId: string | null;
     createdAt: Date;
     isAutoNamed: boolean | null;
-    company: { preferredRegion: string };
+      company: { id: string; preferredRegion: string; apiCompanyId: string | null };
     _count: { members: number };
   };
   /** Effective region for display: workspace.preferredRegion ?? company.preferredRegion */
@@ -147,7 +147,7 @@ export async function getWorkspaceDetailForUser(
       apiWorkspaceId: true,
       createdAt: true,
       isAutoNamed: true,
-      company: { select: { id: true, preferredRegion: true } },
+      company: { select: { id: true, preferredRegion: true, apiCompanyId: true } },
       _count: { select: { members: true } },
       apiKeys: {
         select: {

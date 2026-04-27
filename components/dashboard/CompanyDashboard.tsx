@@ -29,6 +29,8 @@ export function CompanyDashboard({
   billingInfo
 }: CompanyDashboardProps) {
   const pendingInvites = members.filter((m) => m.status === 'PENDING').length;
+  const formatLimit = (value: number | null | undefined) =>
+    value == null ? 'Unlimited' : value.toLocaleString();
 
   return (
     <div className="space-y-6">
@@ -89,6 +91,7 @@ export function CompanyDashboard({
                   <TableHead>Name</TableHead>
                   <TableHead>Region</TableHead>
                   <TableHead>Members</TableHead>
+                  <TableHead>Monthly usage</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -106,6 +109,11 @@ export function CompanyDashboard({
                       </Badge>
                     </TableCell>
                     <TableCell>{workspace.memberCount}</TableCell>
+                    <TableCell>
+                      {workspace.monthlyEvents == null
+                        ? '—'
+                        : `${workspace.monthlyEvents.toLocaleString()}${workspace.monthlyEventsCapped ? '+' : ''} events`}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={workspace.status === 'ACTIVE' ? 'default' : 'secondary'}
@@ -198,10 +206,16 @@ export function CompanyDashboard({
                 </div>
               )}
               {billingInfo.usage && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Usage this period</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground mb-1">Usage this month</p>
                   <p className="text-sm text-foreground">
-                    Events: {billingInfo.usage.eventsIngested.toLocaleString()} · Exports: {billingInfo.usage.exportsCreated} · Webhooks: {billingInfo.usage.webhooksActive}
+                    Events: {billingInfo.usage.eventsIngested.toLocaleString()} / {formatLimit(billingInfo.limits?.eventsIngested)}
+                  </p>
+                  <p className="text-sm text-foreground">
+                    Exports: {billingInfo.usage.exportsCreated.toLocaleString()} / {formatLimit(billingInfo.limits?.exportsCreated)}
+                  </p>
+                  <p className="text-sm text-foreground">
+                    Webhooks: {billingInfo.usage.webhooksActive.toLocaleString()} / {formatLimit(billingInfo.limits?.webhooksActive)}
                   </p>
                 </div>
               )}

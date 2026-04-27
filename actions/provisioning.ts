@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@/generated/prisma/client';
+import { DataRegion, Prisma } from '@/generated/prisma/client';
 import {
   isHyreLogApiConfigured,
   toApiDataRegion,
@@ -26,12 +26,21 @@ function actorFrom(userId: string, userEmail: string | null, userRole: string, c
   return { userId, userEmail: userEmail ?? undefined, userRole, companyId };
 }
 
+export type ProvisionCompanyAndStoreOptions = {
+  /**
+   * When set (e.g. a workspace was just created with a region), use this to pick the API
+   * `dataRegion` and sync `Company.preferredRegion`. Otherwise the company row default (often US) wins.
+   */
+  dataRegionForProvision?: string | null;
+};
+
 /**
  * Call after company exists in dashboard DB. Provisions company in API and sets company.apiCompanyId.
  */
 export async function provisionCompanyAndStore(
   dashboardCompanyId: string,
-  actor?: { userId: string; userEmail: string | null; userRole: string }
+  actor?: { userId: string; userEmail: string | null; userRole: string },
+  options?: ProvisionCompanyAndStoreOptions
 ): Promise<{ ok: true; apiCompanyId: string } | { ok: false; error: string }> {
   if (!isHyreLogApiConfigured()) {
     return { ok: false, error: 'HyreLog API not configured' };
@@ -44,7 +53,18 @@ export async function provisionCompanyAndStore(
   if (!company) return { ok: false, error: 'Company not found' };
   if (company.apiCompanyId) return { ok: true, apiCompanyId: company.apiCompanyId };
 
-  const dataRegion = toApiDataRegion(company.preferredRegion);
+  const override = options?.dataRegionForProvision;
+  const dataRegion = override?.trim()
+    ? toApiDataRegion(override)
+    : toApiDataRegion(company.preferredRegion);
+
+  if (override?.trim()) {
+    const sync = dataRegion as DataRegion;
+    await prisma.company.update({
+      where: { id: company.id },
+      data: { preferredRegion: sync },
+    });
+  }
   const actorHeaders = actor ? actorFrom(actor.userId, actor.userEmail, actor.userRole, company.id) : undefined;
 
   try {
@@ -85,6 +105,7 @@ export async function provisionWorkspaceAndStore(
       companyId: true,
       slug: true,
       name: true,
+      preferredRegion: true,
       apiWorkspaceId: true,
       company: { select: { id: true, apiCompanyId: true } },
     },
@@ -93,7 +114,9 @@ export async function provisionWorkspaceAndStore(
   if (workspace.apiWorkspaceId) return { ok: true, apiWorkspaceId: workspace.apiWorkspaceId };
 
   if (!workspace.company.apiCompanyId) {
-    const prov = await provisionCompanyAndStore(workspace.companyId, actor);
+    const prov = await provisionCompanyAndStore(workspace.companyId, actor, {
+      dataRegionForProvision: workspace.preferredRegion,
+    });
     if (!prov.ok) return prov;
   }
 
@@ -295,7 +318,6 @@ export async function restoreWorkspaceAndSync(
 export async function createKeyAndSync(
   workspaceId: string,
   name: string,
-  companyPreferredRegion: string,
   actor?: { userId: string; userEmail: string | null; userRole: string }
 ): Promise<
   | { ok: true; keyId: string; fullKey: string; prefix: string }
@@ -316,7 +338,20 @@ export async function createKeyAndSync(
   }
   if (!isApiKeySyncConfigured()) return { ok: false, error: 'API key sync not configured (HYRELOG_API_KEY_SECRET)' };
 
-  const apiRegion = toApiDataRegion(companyPreferredRegion) as 'US' | 'EU' | 'UK' | 'AU';
+  const actorHeaders = actor ? actorFrom(actor.userId, actor.userEmail, actor.userRole, workspace.companyId) : undefined;
+
+  let apiRegion: 'US' | 'EU' | 'UK' | 'AU';
+  try {
+    const company = await apiGetCompany(workspace.companyId, actorHeaders);
+    if (!company.exists || !company.dataRegion) {
+      return { ok: false, error: 'Provisioned API company not found during key sync' };
+    }
+    apiRegion = company.dataRegion as 'US' | 'EU' | 'UK' | 'AU';
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `Failed to load API company region for key sync: ${message}` };
+  }
+
   const { fullKey, prefix } = generateApiFormatKey(apiRegion);
   const hash = hashApiKeyForSync(fullKey);
 

@@ -17,7 +17,7 @@ export async function updateCompanyAction(input: z.infer<typeof UpdateCompanySch
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? 'Invalid fields.' };
   }
 
-  const session = await requireDashboardAccess('/settings/company');
+  const session = await requireDashboardAccess('/company-settings');
   const companyId = (session as { company: { id: string } }).company.id;
   const userRole = (session as { userCompany: { role: string } }).userCompany?.role;
   if (!['OWNER', 'ADMIN'].includes(userRole)) {
@@ -46,7 +46,7 @@ export async function updateCompanyAction(input: z.infer<typeof UpdateCompanySch
     data: { name: parsed.data.name.trim(), slug },
   });
 
-  revalidatePath('/settings/company');
+  revalidatePath('/company-settings');
   revalidatePath('/');
   return { ok: true as const };
 }

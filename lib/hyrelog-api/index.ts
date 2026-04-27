@@ -13,6 +13,9 @@ import type {
   RevokeKeyResponse,
   ArchiveWorkspaceResponse,
   RestoreWorkspaceResponse,
+  ListCompanyApiKeysResponse,
+  CreateCompanyApiKeyResponse,
+  UpdateCompanyApiKeyAllowlistResponse,
 } from './types';
 
 const DASHBOARD_PREFIX = '/dashboard';
@@ -21,9 +24,12 @@ export type { ActorHeaders } from './client';
 export { isHyreLogApiConfigured, HyreLogApiError } from './client';
 export type { ApiError } from './client';
 
-/** Map dashboard DataRegion to API dataRegion (API has US, EU, UK, AU; no APAC) */
-export function toApiDataRegion(preferredRegion: string): 'US' | 'EU' | 'UK' | 'AU' {
-  const r = preferredRegion.toUpperCase();
+/** Map dashboard DataRegion to API dataRegion (API has US, EU, UK, AU). Legacy APAC maps to US. */
+export function toApiDataRegion(
+  preferredRegion: string | null | undefined
+): 'US' | 'EU' | 'UK' | 'AU' {
+  if (preferredRegion == null || preferredRegion === '') return 'US';
+  const r = String(preferredRegion).toUpperCase();
   if (r === 'US' || r === 'EU' || r === 'UK' || r === 'AU') return r as 'US' | 'EU' | 'UK' | 'AU';
   if (r === 'APAC') return 'US';
   return 'US';
@@ -120,6 +126,50 @@ export async function revokeApiKey(
   return data;
 }
 
+export async function listCompanyApiKeys(
+  actor: ActorHeaders & { companyId: string }
+): Promise<ListCompanyApiKeysResponse> {
+  const { data } = await hyrelogRequest<ListCompanyApiKeysResponse>(
+    `${DASHBOARD_PREFIX}/api-keys/company`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function createCompanyApiKey(
+  params: { name: string; expiresAt?: string },
+  actor: ActorHeaders & { companyId: string }
+): Promise<CreateCompanyApiKeyResponse> {
+  const { data } = await hyrelogRequest<CreateCompanyApiKeyResponse>(
+    `${DASHBOARD_PREFIX}/api-keys/company`,
+    { method: 'POST', body: params, actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function revokeCompanyApiKey(
+  apiKeyId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<RevokeKeyResponse> {
+  const { data } = await hyrelogRequest<RevokeKeyResponse>(
+    `${DASHBOARD_PREFIX}/api-keys/company/${encodeURIComponent(apiKeyId)}/revoke`,
+    { method: 'POST', actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function updateCompanyApiKeyAllowlist(
+  apiKeyId: string,
+  params: { ipAllowlist: string[] },
+  actor: ActorHeaders & { companyId: string }
+): Promise<UpdateCompanyApiKeyAllowlistResponse> {
+  const { data } = await hyrelogRequest<UpdateCompanyApiKeyAllowlistResponse>(
+    `${DASHBOARD_PREFIX}/api-keys/company/${encodeURIComponent(apiKeyId)}/allowlist`,
+    { method: 'PATCH', body: params, actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
 export async function archiveWorkspace(
   dashboardWorkspaceId: string,
   params: { archivedAt: string; revokeAllKeys?: boolean },
@@ -146,7 +196,10 @@ export async function restoreWorkspace(
 
 export interface DashboardEventsParams {
   limit?: number;
-  cursor?: string;
+  /** Zero-based page offset in rows (not pages). */
+  offset?: number;
+  sort?: 'timestamp' | 'category' | 'action' | 'id';
+  order?: 'asc' | 'desc';
   from?: string;
   to?: string;
   category?: string;
@@ -172,7 +225,19 @@ export interface DashboardEventsResponse {
     geo?: string | null;
     userAgent?: string | null;
   }>;
-  nextCursor: string | null;
+  /** Total rows matching the filter (ignores limit/offset). */
+  total: number;
+}
+
+export interface DashboardEventFilterOptionsParams {
+  from?: string;
+  to?: string;
+  workspaceId?: string;
+}
+
+export interface DashboardEventFilterOptionsResponse {
+  categories: string[];
+  actions: string[];
 }
 
 export async function getDashboardEvents(
@@ -181,7 +246,9 @@ export async function getDashboardEvents(
 ): Promise<DashboardEventsResponse> {
   const search = new URLSearchParams();
   if (params.limit != null) search.set('limit', String(params.limit));
-  if (params.cursor) search.set('cursor', params.cursor);
+  if (params.offset != null) search.set('offset', String(params.offset));
+  if (params.sort) search.set('sort', params.sort);
+  if (params.order) search.set('order', params.order);
   if (params.from) search.set('from', params.from);
   if (params.to) search.set('to', params.to);
   if (params.category) search.set('category', params.category);
@@ -191,6 +258,22 @@ export async function getDashboardEvents(
   const q = search.toString();
   const path = `${DASHBOARD_PREFIX}/events${q ? `?${q}` : ''}`;
   const { data } = await hyrelogRequest<DashboardEventsResponse>(path, {
+    actor: { ...actor, companyId: actor.companyId },
+  });
+  return data;
+}
+
+export async function getDashboardEventFilterOptions(
+  params: DashboardEventFilterOptionsParams,
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardEventFilterOptionsResponse> {
+  const search = new URLSearchParams();
+  if (params.from) search.set('from', params.from);
+  if (params.to) search.set('to', params.to);
+  if (params.workspaceId) search.set('workspaceId', params.workspaceId);
+  const q = search.toString();
+  const path = `${DASHBOARD_PREFIX}/events/filter-options${q ? `?${q}` : ''}`;
+  const { data } = await hyrelogRequest<DashboardEventFilterOptionsResponse>(path, {
     actor: { ...actor, companyId: actor.companyId },
   });
   return data;
@@ -232,6 +315,18 @@ export interface DashboardWebhooksResponse {
   }>;
 }
 
+export interface DashboardWebhookCreateResponse {
+  id: string;
+  url: string;
+  status: string;
+  events: string[];
+  workspaceId: string;
+  projectId?: string | null;
+  /** Returned once at creation; verify webhook signatures with this value. */
+  secret: string;
+  createdAt: string;
+}
+
 export async function getDashboardWebhooks(
   actor: ActorHeaders & { companyId: string }
 ): Promise<DashboardWebhooksResponse> {
@@ -239,5 +334,68 @@ export async function getDashboardWebhooks(
     `${DASHBOARD_PREFIX}/webhooks`,
     { actor: { ...actor, companyId: actor.companyId } }
   );
+  return data;
+}
+
+export async function createDashboardWebhook(
+  params: { workspaceId: string; url: string; events?: string[]; projectId?: string | null },
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardWebhookCreateResponse> {
+  const { data } = await hyrelogRequest<DashboardWebhookCreateResponse>(
+    `${DASHBOARD_PREFIX}/webhooks`,
+    { method: 'POST', body: params, actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function enableDashboardWebhook(
+  webhookId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ id: string; status: string }> {
+  const { data } = await hyrelogRequest<{ id: string; status: string }>(
+    `${DASHBOARD_PREFIX}/webhooks/${encodeURIComponent(webhookId)}/enable`,
+    { method: 'POST', actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function disableDashboardWebhook(
+  webhookId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ id: string; status: string }> {
+  const { data } = await hyrelogRequest<{ id: string; status: string }>(
+    `${DASHBOARD_PREFIX}/webhooks/${encodeURIComponent(webhookId)}/disable`,
+    { method: 'POST', actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export interface DashboardWebhookDeliveriesResponse {
+  deliveries: Array<{
+    id: string;
+    eventId: string;
+    attempt: number;
+    status: string;
+    responseStatus?: number | null;
+    errorCode?: string | null;
+    errorMessage?: string | null;
+    durationMs?: number | null;
+    createdAt: string;
+  }>;
+}
+
+export async function getDashboardWebhookDeliveries(
+  webhookId: string,
+  actor: ActorHeaders & { companyId: string },
+  params?: { limit?: number; status?: 'PENDING' | 'SENDING' | 'SUCCEEDED' | 'FAILED' | 'RETRY_SCHEDULED' }
+): Promise<DashboardWebhookDeliveriesResponse> {
+  const search = new URLSearchParams();
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  if (params?.status) search.set('status', params.status);
+  const q = search.toString();
+  const path = `${DASHBOARD_PREFIX}/webhooks/${encodeURIComponent(webhookId)}/deliveries${q ? `?${q}` : ''}`;
+  const { data } = await hyrelogRequest<DashboardWebhookDeliveriesResponse>(path, {
+    actor: { ...actor, companyId: actor.companyId },
+  });
   return data;
 }

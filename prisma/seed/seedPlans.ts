@@ -35,8 +35,8 @@ export const HYRELOG_PLANS = [
         prioritySupport: false
       },
       data: {
-        allowedRegions: ['APAC'],
-        defaultRegion: 'APAC'
+        allowedRegions: ['US'],
+        defaultRegion: 'US'
       }
     }
   },
@@ -74,8 +74,8 @@ export const HYRELOG_PLANS = [
         prioritySupport: false
       },
       data: {
-        allowedRegions: ['APAC'],
-        defaultRegion: 'APAC'
+        allowedRegions: ['US'],
+        defaultRegion: 'US'
       }
     }
   },
@@ -114,8 +114,8 @@ export const HYRELOG_PLANS = [
         prioritySupport: true
       },
       data: {
-        allowedRegions: ['APAC'],
-        defaultRegion: 'APAC'
+        allowedRegions: ['US'],
+        defaultRegion: 'US'
       }
     }
   },
@@ -154,7 +154,7 @@ export const HYRELOG_PLANS = [
         prioritySupport: true
       },
       data: {
-        allowedRegions: ['AU', 'APAC', 'US', 'EU', 'UK'],
+        allowedRegions: ['AU', 'US', 'EU', 'UK'],
         defaultRegion: 'AU'
       }
     }
@@ -194,7 +194,7 @@ export const HYRELOG_PLANS = [
         prioritySupport: true
       },
       data: {
-        allowedRegions: ['AU', 'APAC', 'US', 'EU', 'UK'],
+        allowedRegions: ['AU', 'US', 'EU', 'UK'],
         defaultRegion: 'AU'
       }
     }

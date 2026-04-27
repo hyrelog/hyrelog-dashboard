@@ -1,8 +1,8 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import { auth } from '@/lib/auth';
 import { getPostLoginDestination } from '@/lib/auth/postLoginRoute';
+import { getFreshSession } from '@/lib/session';
 import { safeReturnTo, toLogin } from '@/lib/auth/redirects';
 
 export default async function PostLoginPage({
@@ -13,9 +13,8 @@ export default async function PostLoginPage({
   const { returnTo } = await searchParams;
   const rt = safeReturnTo(returnTo);
 
-  const h = await headers();
-  // Bypass cookie cache so emailVerified is fresh (e.g. right after magic-link verify)
-  const session = await auth.api.getSession({ headers: h, query: { disableCookieCache: true } });
+  // Use session with fresh emailVerified from DB (e.g. right after magic-link verify)
+  const session = await getFreshSession();
 
   if (!session) redirect(toLogin(rt));
 

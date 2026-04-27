@@ -14,7 +14,6 @@ import {
 import { RegisterSchema } from '@/schemas/register';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import { provisionCompanyAndStore, provisionWorkspaceAndStore } from '@/actions/provisioning';
 import { sendVerificationEmail } from '@/lib/email/sendVerificationEmail';
 import { EmailCheckResult, RegisterInitialData } from '@/types/register';
 import { ActionResult } from '@/types/global';
@@ -231,21 +230,7 @@ export const registerInitial = async (
 
     const result = await runRegistrationTransaction();
 
-    // Best-effort: provision company and workspace in HyreLog API (do not fail signup on API errors)
-    try {
-      await provisionCompanyAndStore(result.company.id, {
-        userId,
-        userEmail: data.user?.email ?? null,
-        userRole: 'OWNER',
-      });
-      await provisionWorkspaceAndStore(result.workspace.id, {
-        userId,
-        userEmail: data.user?.email ?? null,
-        userRole: 'OWNER',
-      });
-    } catch (provisionErr) {
-      console.warn('HyreLog API provisioning failed (company/workspace created in dashboard):', provisionErr);
-    }
+    // Provisioning is deferred until after onboarding so the user's chosen region is used.
 
     // Send verification email (magic link + OTP fallback)
     // Don't fail registration if email fails - user is already registered

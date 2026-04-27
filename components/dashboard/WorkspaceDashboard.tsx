@@ -4,16 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from './EmptyState';
-import { Plus, FolderKanban, Users, Globe, Activity } from 'lucide-react';
-import type { Workspace, Project, Member } from '@/types/dashboard';
+import { Plus, FolderKanban, Users, Globe, Activity, CreditCard } from 'lucide-react';
+import type { Workspace, Project, Member, BillingInfo } from '@/types/dashboard';
+import Link from 'next/link';
 
 interface WorkspaceDashboardProps {
   workspace: Workspace;
   projects: Project[];
   members: Member[];
+  billingInfo?: BillingInfo;
 }
 
-export function WorkspaceDashboard({ workspace, projects, members }: WorkspaceDashboardProps) {
+export function WorkspaceDashboard({ workspace, projects, members, billingInfo }: WorkspaceDashboardProps) {
+  const formatLimit = (value: number | null | undefined) =>
+    value == null ? 'Unlimited' : value.toLocaleString();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -77,6 +82,54 @@ export function WorkspaceDashboard({ workspace, projects, members }: WorkspaceDa
           </CardContent>
         </Card>
       </div>
+
+      {billingInfo && (
+        <Card className="rounded-2xl shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Billing snapshot
+            </CardTitle>
+            <CardDescription>High-level plan and usage for the current period.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm">
+              Plan: <strong>{billingInfo.planName}</strong>
+              {billingInfo.nextInvoiceDate ? ` · Next billing: ${billingInfo.nextInvoiceDate}` : ''}
+            </p>
+            {billingInfo.usage && (
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <p className="text-xs">Usage this month</p>
+                <p>
+                  Events:{' '}
+                  <strong className="text-foreground">
+                    {billingInfo.usage.eventsIngested.toLocaleString()} / {formatLimit(billingInfo.limits?.eventsIngested)}
+                  </strong>
+                </p>
+                <p>
+                  Exports:{' '}
+                  <strong className="text-foreground">
+                    {billingInfo.usage.exportsCreated.toLocaleString()} / {formatLimit(billingInfo.limits?.exportsCreated)}
+                  </strong>
+                </p>
+                <p>
+                  Webhooks:{' '}
+                  <strong className="text-foreground">
+                    {billingInfo.usage.webhooksActive.toLocaleString()} / {formatLimit(billingInfo.limits?.webhooksActive)}
+                  </strong>
+                </p>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="w-full bg-transparent"
+              asChild
+            >
+              <Link href="/billing/subscription">Manage subscription</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Projects Card */}
       <Card className="rounded-2xl shadow-sm">

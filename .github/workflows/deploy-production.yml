@@ -1,0 +1,81 @@
+# Build dashboard image, push to ECR, update ECS service (sibling to hyrelog-api)
+#
+# Required secrets: AWS_REGION, ECR_DASHBOARD_REPOSITORY, ECS_CLUSTER, ECS_SERVICE_DASHBOARD
+# Optional: AWS_DEPLOY_ROLE_ARN (OIDC) OR AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY
+#
+# Run database migrations OUTSIDE this workflow unless your RDS is reachable from GitHub.
+#
+name: deploy-production
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-dashboard-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configure AWS (keys)
+        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        run: |
+          set -euo pipefail
+          TAG="${{ github.sha }}"
+          ECR="${{ secrets.ECR_DASHBOARD_REPOSITORY }}"
+          docker build \
+            --build-arg NEXT_PUBLIC_APP_URL="https://app.hyrelog.com" \
+            --build-arg NEXT_PUBLIC_API_BASE_URL="https://api.hyrelog.com" \
+            -t "$ECR:$TAG" -t "$ECR:latest" .
+          docker push "$ECR:$TAG"
+          docker push "$ECR:latest"
+
+      - name: Deploy ECS
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE_DASHBOARD" --force-new-deployment
+        env:
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          ECS_SERVICE_DASHBOARD: ${{ secrets.ECS_SERVICE_DASHBOARD }}
+
+      - name: Wait stable
+        run: |
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE_DASHBOARD"
+        env:
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          ECS_SERVICE_DASHBOARD: ${{ secrets.ECS_SERVICE_DASHBOARD }}
+
+      - name: On failure — ECS service events
+        if: failure()
+        run: |
+          aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE_DASHBOARD" --query 'services[0].events[:8]' --output json || true
+        env:
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          ECS_SERVICE_DASHBOARD: ${{ secrets.ECS_SERVICE_DASHBOARD }}

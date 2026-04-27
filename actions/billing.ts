@@ -10,6 +10,11 @@ import { getStripe, isStripeConfigured } from '@/lib/stripe';
 export type SubscriptionSummary = {
   planCode: string;
   planName: string;
+  monthlyLimits: {
+    eventsIngested: number | null;
+    exportsCreated: number | null;
+    webhooksActive: number | null;
+  };
   status: string;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
@@ -31,6 +36,24 @@ export async function getSubscriptionSummary(): Promise<{
   subscription: SubscriptionSummary | null;
   stripeConfigured: boolean;
 } | { ok: false; error: string }> {
+  const parseMonthlyLimits = (
+    entitlements: unknown
+  ): { eventsIngested: number | null; exportsCreated: number | null; webhooksActive: number | null } => {
+    if (!entitlements || typeof entitlements !== 'object') {
+      return { eventsIngested: null, exportsCreated: null, webhooksActive: null };
+    }
+    const limits = (entitlements as { limits?: Record<string, unknown> }).limits;
+    if (!limits || typeof limits !== 'object') {
+      return { eventsIngested: null, exportsCreated: null, webhooksActive: null };
+    }
+    const toNullableNumber = (v: unknown): number | null => (typeof v === 'number' ? v : null);
+    return {
+      eventsIngested: toNullableNumber((limits as Record<string, unknown>).eventsPerMonth),
+      exportsCreated: toNullableNumber((limits as Record<string, unknown>).exportsPerMonth),
+      webhooksActive: toNullableNumber((limits as Record<string, unknown>).webhooks),
+    };
+  };
+
   const session = await requireDashboardAccess('/billing/subscription');
   const companyId = (session as { company: { id: string } }).company.id;
 
@@ -55,6 +78,7 @@ export async function getSubscriptionSummary(): Promise<{
     subscription: {
       planCode: sub.plan.code,
       planName: sub.plan.name,
+      monthlyLimits: parseMonthlyLimits(sub.plan.baseEntitlements),
       status: sub.status,
       currentPeriodStart: sub.currentPeriodStart?.toISOString() ?? null,
       currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,

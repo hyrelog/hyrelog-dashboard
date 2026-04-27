@@ -42,6 +42,7 @@ async function sleep(ms: number): Promise<void> {
 export interface ApiError {
   code: string;
   error?: string;
+  reason?: string;
   details?: unknown;
 }
 
@@ -56,9 +57,13 @@ export async function hyrelogRequest<T = unknown>(
   const headers: Record<string, string> = {
     'x-dashboard-token': token,
     'x-request-id': uuid(),
-    'Content-Type': 'application/json',
     ...(extraHeaders as Record<string, string>),
   };
+  // Only set JSON content-type when there is a body. Fastify rejects POSTs with
+  // Content-Type: application/json and an empty body (FST_ERR_CTP_EMPTY_JSON_BODY).
+  if (body !== undefined) {
+    headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
+  }
   if (actor?.userId) headers['x-user-id'] = actor.userId;
   if (actor?.userEmail) headers['x-user-email'] = actor.userEmail;
   if (actor?.userRole) headers['x-user-role'] = actor.userRole;
@@ -115,7 +120,9 @@ export class HyreLogApiError extends Error {
     public readonly status: number,
     public readonly body: ApiError
   ) {
-    super(body?.error ?? `HyreLog API error ${status}`);
+    const msg = body?.error ?? `HyreLog API error ${status}`;
+    const reason = body?.reason ? ` [${body.reason}]` : '';
+    super(msg + reason);
     this.name = 'HyreLogApiError';
   }
 }

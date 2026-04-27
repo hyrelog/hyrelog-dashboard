@@ -110,12 +110,11 @@ const navSections: {
         title: 'Personal settings',
         href: '/settings',
         icon: User,
-        isActive: (path) =>
-          path.startsWith('/settings') && !path.startsWith('/settings/company')
+        isActive: (path) => path.startsWith('/settings')
       },
       {
         title: 'Company Settings',
-        href: '/settings/company',
+        href: '/company-settings',
         icon: Settings,
         roles: ['OWNER', 'ADMIN']
       }

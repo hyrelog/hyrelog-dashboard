@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { requireDashboardAccess } from '@/lib/auth/requireDashboardAccess';
 import { provisionWorkspaceAndStore } from '@/actions/provisioning';
+import { toApiDataRegion } from '@/lib/hyrelog-api';
 
 import type { CompanyRole } from '@/generated/prisma/client';
 
@@ -65,7 +66,7 @@ export async function listWorkspacesForUser(userId: string) {
 
 const CreateWorkspaceSchema = z.object({
   name: z.string().trim().min(2, 'Name is too short').max(80, 'Name is too long'),
-  preferredRegion: z.enum(['US', 'EU', 'APAC', 'UK', 'AU']).optional()
+  preferredRegion: z.enum(['US', 'EU', 'UK', 'AU']).optional()
 });
 
 const RenameWorkspaceSchema = z.object({
@@ -111,7 +112,33 @@ export async function createWorkspaceAction(input: z.infer<typeof CreateWorkspac
   const slug = await uniqueWorkspaceSlug(company.id, name);
   const now = new Date();
 
+  const companyRow = await prisma.company.findUnique({
+    where: { id: company.id },
+    select: { apiCompanyId: true, preferredRegion: true },
+  });
+  if (!companyRow) {
+    return { ok: false as const, error: 'Company not found.' };
+  }
+
+  if (companyRow.apiCompanyId && preferredRegion) {
+    const orgRegion = toApiDataRegion(companyRow.preferredRegion);
+    const want = toApiDataRegion(preferredRegion);
+    if (orgRegion !== want) {
+      return {
+        ok: false as const,
+        error: `This company is already provisioned in ${orgRegion}. You cannot add a workspace in ${want} to the same organization—create a new account/company for another region, or use ${orgRegion} here.`,
+      };
+    }
+  }
+
   const workspace = await prisma.$transaction(async (tx) => {
+    if (!companyRow.apiCompanyId && preferredRegion) {
+      await tx.company.update({
+        where: { id: company.id },
+        data: { preferredRegion },
+      });
+    }
+
     const ws = await tx.workspace.create({
       data: {
         companyId: company.id,

@@ -12,5 +12,5 @@ export const SaveSchema = z.object({
   // Form fields
   companyName: z.string().trim().max(80).optional(),
   workspaceName: z.string().trim().min(2).max(80),
-  preferredRegion: z.enum(['US', 'EU', 'APAC', 'UK', 'AU']).optional()
+  preferredRegion: z.enum(['US', 'EU', 'UK', 'AU']).optional()
 });

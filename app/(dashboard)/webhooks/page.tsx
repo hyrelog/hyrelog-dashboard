@@ -9,6 +9,8 @@ export default async function WebhooksPage() {
   return (
     <WebhooksContent
       webhooks={result.ok ? result.webhooks : []}
+      workspaces={result.ok ? result.workspaces : []}
+      projects={result.ok ? result.projects : []}
       error={result.ok ? null : result.error}
       apiConfigured={result.ok || result.error !== 'API not configured'}
     />

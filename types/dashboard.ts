@@ -16,6 +16,7 @@ export interface Company {
   name: string;
   slug: string;
   preferredRegion: string;
+  apiCompanyId?: string | null;
   planType: 'TRIAL' | 'ACTIVE' | 'INACTIVE';
   trialDaysRemaining?: number;
 }
@@ -26,6 +27,8 @@ export interface Workspace {
   slug: string;
   region: string;
   memberCount: number;
+  monthlyEvents?: number | null;
+  monthlyEventsCapped?: boolean;
   status: 'ACTIVE' | 'INACTIVE';
   companyId: string;
 }
@@ -52,6 +55,11 @@ export interface BillingInfo {
   planName: string;
   nextInvoiceDate?: string;
   amount?: number;
+  limits?: {
+    eventsIngested: number | null;
+    exportsCreated: number | null;
+    webhooksActive: number | null;
+  };
   usage?: {
     eventsIngested: number;
     exportsCreated: number;

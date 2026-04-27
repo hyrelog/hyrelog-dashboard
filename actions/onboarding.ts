@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 import { LoadSchema, SaveSchema } from '@/schemas/onboarding';
-import { getFreshSession, getSessionFromHeaders } from '@/lib/session';
+import { getFreshSession } from '@/lib/session';
 import { safeReturnTo, toCheckEmail } from '@/lib/auth/redirects';
+import { provisionWorkspaceAndStore } from '@/actions/provisioning';
 
 /**
  * Finds the workspace that should be onboarded for the creator.
@@ -155,7 +156,7 @@ export async function saveOnboarding(values: z.infer<typeof SaveSchema>) {
   const { workspaceId, companyName, workspaceName, preferredRegion, returnTo } = parsed.data;
   const rt = safeReturnTo(returnTo);
 
-  const session = await getSessionFromHeaders();
+  const session = await getFreshSession();
   if (!session)
     return {
       success: false as const,
@@ -260,6 +261,19 @@ export async function saveOnboarding(values: z.infer<typeof SaveSchema>) {
     });
   });
 
+  // Provision company and workspace in HyreLog API now that region is set (best-effort; do not fail onboarding)
+  const actor = {
+    userId: session.user.id,
+    userEmail: (session.user as { email?: string | null }).email ?? null,
+    userRole: (session.userCompany as { role: string }).role,
+  };
+  try {
+    // Single entry point: reads workspace (and its preferredRegion) to provision company in the right region
+    await provisionWorkspaceAndStore(workspace.id, actor);
+  } catch (provisionErr) {
+    console.warn('HyreLog API provisioning after onboarding failed:', provisionErr);
+  }
+
   return { success: true as const, redirectTo: rt };
 }
 
@@ -286,7 +300,7 @@ export async function skipOnboarding(input: { workspaceId: string; returnTo?: st
 
   const rt = safeReturnTo(parsed.data.returnTo);
 
-  const session = await getSessionFromHeaders();
+  const session = await getFreshSession();
   if (!session)
     return {
       success: false as const,
@@ -342,6 +356,18 @@ export async function skipOnboarding(input: { workspaceId: string; returnTo?: st
       }
     });
   });
+
+  // Provision company and workspace in HyreLog API (best-effort; company uses default region when skipped)
+  const actor = {
+    userId: session.user.id,
+    userEmail: (session.user as { email?: string | null }).email ?? null,
+    userRole: (session.userCompany as { role: string }).role,
+  };
+  try {
+    await provisionWorkspaceAndStore(workspace.id, actor);
+  } catch (provisionErr) {
+    console.warn('HyreLog API provisioning after onboarding skip failed:', provisionErr);
+  }
 
   return { success: true as const, redirectTo: rt };
 }

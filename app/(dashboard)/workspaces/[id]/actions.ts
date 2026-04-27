@@ -16,6 +16,7 @@ import {
   revokeKeyAndSync,
   createKeyAndSync,
   syncKeyAfterCreate,
+  provisionWorkspaceAndStore,
 } from '@/actions/provisioning';
 import { isHyreLogApiConfigured } from '@/lib/hyrelog-api';
 import { isApiKeySyncConfigured } from '@/lib/hyrelog-api/key-format';
@@ -54,7 +55,7 @@ const RevokeKeySchema = z.object({
 
 const UpdateRegionSchema = z.object({
   workspaceId: z.string().uuid(),
-  preferredRegion: z.enum(['US', 'EU', 'APAC', 'UK', 'AU'])
+  preferredRegion: z.enum(['US', 'EU', 'UK', 'AU'])
 });
 
 const CreateProjectSchema = z.object({
@@ -80,6 +81,24 @@ async function getAccess(workspaceId: string) {
     userCompany: { role: session.userCompany.role }
   });
   return { session, company, payload };
+}
+
+/** Provision this workspace in the HyreLog API (sets apiWorkspaceId). Call when status is "Not provisioned". */
+export async function provisionWorkspaceAction(workspaceId: string): Promise<
+  | { ok: true; apiWorkspaceId: string }
+  | { ok: false; error: string }
+> {
+  const parsed = z.string().uuid().safeParse(workspaceId);
+  if (!parsed.success) return { ok: false, error: 'Invalid workspace.' };
+  const { session, payload } = await getAccess(parsed.data);
+  if (!payload) return { ok: false, error: 'Not authorized.' };
+  if (!payload.canAdmin) return { ok: false, error: 'Only admins can provision the workspace.' };
+  const sessionWithCompany = session as { user: { id: string; email: string }; userCompany: { role: string } };
+  return provisionWorkspaceAndStore(parsed.data, {
+    userId: sessionWithCompany.user.id,
+    userEmail: sessionWithCompany.user.email ?? null,
+    userRole: sessionWithCompany.userCompany.role,
+  });
 }
 
 export async function renameWorkspaceAction(
@@ -455,9 +474,16 @@ export async function createKeyAction(input: z.infer<typeof CreateKeySchema>) {
     userRole: (session.userCompany as { role: string }).role,
   };
 
-  if (payload.workspace.apiWorkspaceId && isApiKeySyncConfigured()) {
-    const companyRegion = payload.workspace.company?.preferredRegion ?? 'US';
-    const result = await createKeyAndSync(workspaceId, name.trim(), companyRegion, actor);
+  if (payload.workspace.apiWorkspaceId) {
+    if (!isApiKeySyncConfigured()) {
+      return {
+        ok: false as const,
+        error:
+          'HYRELOG_API_KEY_SECRET is not set in the dashboard environment. Provisioned workspaces must create synced API keys so the copied key includes the hlk_ prefix.'
+      };
+    }
+
+    const result = await createKeyAndSync(workspaceId, name.trim(), actor);
     if (!result.ok) return { ok: false as const, error: result.error };
     await prisma.auditLog.create({
       data: {

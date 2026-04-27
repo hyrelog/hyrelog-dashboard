@@ -21,10 +21,12 @@ export function DashboardHomeContent({
   billingInfo,
   isCompanyAdmin
 }: DashboardHomeContentProps) {
-  // For workspace users, show first workspace alphabetically
+  // Select first workspace alphabetically when rendering workspace-level dashboard.
   const defaultWorkspace = workspaces.sort((a, b) => a.name.localeCompare(b.name))[0];
 
-  const currentWorkspace = !isCompanyAdmin ? null : defaultWorkspace;
+  // Company admins/owners/billing users land on company dashboard.
+  // Members land on workspace dashboard.
+  const currentWorkspace = isCompanyAdmin ? null : defaultWorkspace;
 
   // Filter projects for current workspace
   const workspaceProjects = currentWorkspace
@@ -38,6 +40,7 @@ export function DashboardHomeContent({
           workspace={currentWorkspace}
           projects={workspaceProjects}
           members={members}
+          billingInfo={billingInfo}
         />
       ) : (
         <CompanyDashboard

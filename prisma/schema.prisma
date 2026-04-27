@@ -338,7 +338,7 @@ model Company {
   id              String     @id @default(uuid())
   slug            String     @unique
   name            String
-  preferredRegion DataRegion @default(APAC)
+  preferredRegion DataRegion @default(US)
   isAutoNamed Boolean @default(false) 
   status CompanyStatus @default(ACTIVE)
 

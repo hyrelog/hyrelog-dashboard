@@ -20,7 +20,7 @@ const NOUNS = [
   'Batch', 'Queue', 'Stream', 'Trace', 'Log', 'Audit', 'Report', 'View', 'Scope'
 ];
 
-const DATA_REGIONS = ['US', 'EU', 'APAC', 'UK', 'AU'] as const;
+const DATA_REGIONS = ['US', 'EU', 'UK', 'AU'] as const;
 const WORKSPACE_STATUSES = ['ACTIVE', 'INACTIVE'] as const;
 
 function randomRegion(): (typeof DATA_REGIONS)[number] {

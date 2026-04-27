@@ -1,0 +1,51 @@
+# Hyrelog-dashboard — typecheck, lint, build, Docker (no push)
+name: checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/hyrelog_ci?schema=public
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build (Next.js)
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/hyrelog_ci?schema=public
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_APP_URL: "https://app.hyrelog.com"
+          NEXT_PUBLIC_API_BASE_URL: "https://api.hyrelog.com"
+
+      - name: Verify Docker build
+        run: docker build -t hyrelog-dashboard:ci .
+        env:
+          DOCKER_BUILDKIT: "1"

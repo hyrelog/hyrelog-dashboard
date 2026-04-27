@@ -9,11 +9,44 @@ import { getCompanyAccess } from '@/lib/workspaces/access';
 import { listWorkspacesForCompany, listWorkspacesForUser } from '@/lib/workspaces/queries';
 import type { User, Company, Workspace } from '@/types/dashboard';
 import { SubscriptionStatus } from '@/generated/prisma/client';
+import { getDashboardEvents } from '@/lib/hyrelog-api';
+import { isHyreLogApiConfigured } from '@/lib/hyrelog-api/client';
 
 function trialDaysRemainingFrom(trialEndsAt: Date | null | undefined): number | undefined {
   if (trialEndsAt == null) return undefined;
   const now = Date.now();
   return Math.max(0, Math.ceil((trialEndsAt.getTime() - now) / (24 * 60 * 60 * 1000)));
+}
+
+async function getWorkspaceMonthlyEventUsage(
+  workspaceIds: string[],
+  actor: { userId: string; userEmail: string; userRole: string; companyId: string }
+): Promise<Map<string, { events: number; capped: boolean }>> {
+  const usage = new Map<string, { events: number; capped: boolean }>();
+  if (workspaceIds.length === 0 || !isHyreLogApiConfigured()) return usage;
+
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const from = startOfMonth.toISOString();
+
+  const MAX_WORKSPACES = 10;
+
+  await Promise.all(
+    workspaceIds.slice(0, MAX_WORKSPACES).map(async (workspaceId) => {
+      try {
+        const data = await getDashboardEvents(
+          { workspaceId, from, limit: 1, offset: 0, sort: 'timestamp', order: 'desc' },
+          actor
+        );
+        usage.set(workspaceId, { events: data.total, capped: false });
+      } catch {
+        usage.set(workspaceId, { events: 0, capped: false });
+      }
+    })
+  );
+
+  return usage;
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       where: { id: session.company.id },
       select: {
         preferredRegion: true,
+        apiCompanyId: true,
         subscription: {
           select: {
             status: true,
@@ -45,6 +79,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const workspacesRows = seeAllWorkspaces
     ? await listWorkspacesForCompany(session.company.id)
     : await listWorkspacesForUser(session.user.id);
+
+  const actor = {
+    userId: session.user.id,
+    userEmail: (session.user as { email?: string }).email ?? '',
+    userRole: session.userCompany.role,
+    companyId: session.company.id
+  };
+  const monthlyUsage = await getWorkspaceMonthlyEventUsage(
+    workspacesRows.map((w) => w.id),
+    actor
+  );
 
   const user: User = {
     id: session.user.id,
@@ -70,8 +115,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     preferredRegion: (
       session.company.preferredRegion ??
       companyWithSub?.preferredRegion ??
-      'APAC'
+      'US'
     ).toString(),
+    apiCompanyId: companyWithSub?.apiCompanyId ?? null,
     planType,
     trialDaysRemaining: trialDaysRemainingFrom(sub?.trialEndsAt)
   };
@@ -80,8 +126,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     id: w.id,
     name: w.name,
     slug: w.slug,
-    region: (w.preferredRegion ?? 'APAC').toString(),
+    region: (w.preferredRegion ?? 'US').toString(),
     memberCount: w._count.members,
+    monthlyEvents: monthlyUsage.get(w.id)?.events ?? null,
+    monthlyEventsCapped: monthlyUsage.get(w.id)?.capped ?? false,
     status: ((w as { status?: string }).status ?? 'ACTIVE') as Workspace['status'],
     companyId: session.company.id
   }));

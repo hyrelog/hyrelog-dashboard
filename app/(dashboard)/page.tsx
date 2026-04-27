@@ -17,6 +17,13 @@ export default async function HomePage() {
 
   const billingInfo = {
     planName: subResult.ok && subResult.subscription ? subResult.subscription.planName : 'Free',
+    limits: subResult.ok && subResult.subscription
+      ? {
+          eventsIngested: subResult.subscription.monthlyLimits.eventsIngested,
+          exportsCreated: subResult.subscription.monthlyLimits.exportsCreated,
+          webhooksActive: subResult.subscription.monthlyLimits.webhooksActive,
+        }
+      : undefined,
     nextInvoiceDate: subResult.ok && subResult.subscription?.currentPeriodEnd
       ? new Date(subResult.subscription.currentPeriodEnd).toLocaleDateString(undefined, { dateStyle: 'medium' })
       : undefined,

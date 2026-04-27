@@ -1,16 +1,14 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getFreshSession } from '@/lib/session';
 import { safeReturnTo, toLogin, toCheckEmail, toOnboarding } from '@/lib/auth/redirects';
 
 export async function requireDashboardAccess(returnTo?: string) {
   const rt = safeReturnTo(returnTo);
 
-  const h = await headers();
-  const session = await auth.api.getSession({ headers: h, query: { disableCookieCache: true } });
+  const session = await getFreshSession();
 
   if (!session) {
     redirect(toLogin(rt));
