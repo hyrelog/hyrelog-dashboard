@@ -71,14 +71,15 @@ jobs:
         run: |
           set -euo pipefail
           FULL_IMAGE="${ECR_REPOSITORY}:${IMAGE_TAG}"
-          TMP="$(mktemp)"
+          SRC="$(mktemp)"
+          REGISTER_TMP="$(mktemp)"
           aws ecs describe-task-definition \
             --task-definition "${TASK_DEFINITION_FAMILY}" \
             --region "${AWS_REGION}" \
             --query 'taskDefinition' \
-            --output json > "${TMP}"
+            --output json > "${SRC}"
 
-          REGISTER_JSON="$(jq --arg IMG "$FULL_IMAGE" \
+          jq --arg IMG "$FULL_IMAGE" \
             'del(
               .taskDefinitionArn,
               .revision,
@@ -92,14 +93,18 @@ jobs:
               .enableFaultInjection
             )
             | del(.capacityProviderStrategy)
+            | del(.launchType)
             | .containerDefinitions[0].image = $IMG
-            ' "${TMP}")"
-          rm -f "${TMP}"
+            ' "${SRC}" > "${REGISTER_TMP}"
+          rm -f "${SRC}"
 
-          OUT="$(echo "${REGISTER_JSON}" | aws ecs register-task-definition \
-            --cli-input-json file:///dev/stdin \
+          jq empty "${REGISTER_TMP}"
+          OUT="$(aws ecs register-task-definition \
+            --cli-input-json "file://${REGISTER_TMP}" \
             --region "${AWS_REGION}" \
             --output json)"
+          rm -f "${REGISTER_TMP}"
+
           REV="$(echo "${OUT}" | jq -r '[.taskDefinition.family, (.taskDefinition.revision | tostring)] | join(":")')"
 
           aws ecs update-service \
