@@ -51,21 +51,31 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 
-# Schema + migrations for one-off ECS tasks: override CMD with `npx prisma migrate deploy`
-# (DATABASE_URL remains injected via task definition Secrets Manager — same as the web server).
+# Schema + Prisma CLI for one-off ECS `prisma migrate deploy`.
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 
-# Trust AWS RDS TLS: Node's default store can reject the RDS cert chain with @prisma/adapter-pg + `pg`.
+# Trust AWS RDS TLS: Node/pg need the RDS CA bundle alongside NODE_EXTRA_CA_CERTS.
+#
+# Standalone `.next` does not ship prisma.config.ts dependencies (`prisma/config`). Install prisma into
+# /opt/prisma-cli and put it on NODE_PATH/PATH so `prisma migrate` can load prisma.config.ts without `dotenv`.
 USER root
+ARG PRISMA_MIGRATE_CLI_VERSION=7.7.0
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl \
   && curl -fsSL -o /etc/ssl/certs/aws-rds-global-bundle.pem \
     https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
   && chmod 644 /etc/ssl/certs/aws-rds-global-bundle.pem \
+  && mkdir -p /opt/prisma-cli \
+  && cd /opt/prisma-cli \
+  && npm init -y \
+  && npm install "prisma@${PRISMA_MIGRATE_CLI_VERSION}" --omit=dev --ignore-scripts \
+  && chown -R node:node /opt/prisma-cli \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/aws-rds-global-bundle.pem
+ENV NODE_PATH=/opt/prisma-cli/node_modules
+ENV PATH="/opt/prisma-cli/node_modules/.bin:${PATH}"
 
 RUN chown -R node:node /app
 USER node

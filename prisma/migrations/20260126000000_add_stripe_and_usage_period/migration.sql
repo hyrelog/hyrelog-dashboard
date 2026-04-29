@@ -29,6 +29,6 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'usage_periods_companyId_fkey'
     ) THEN
-        ALTER TABLE "usage_periods" ADD CONSTRAINT "usage_periods_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+        ALTER TABLE "usage_periods" ADD CONSTRAINT "usage_periods_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "company_refs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
     END IF;
 END $$;

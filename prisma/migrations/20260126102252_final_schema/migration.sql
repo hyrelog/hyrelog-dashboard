@@ -130,6 +130,14 @@ ALTER TABLE "users" ALTER COLUMN "name" DROP NOT NULL;
 -- AlterTable
 ALTER TABLE "verifications" ADD COLUMN     "userId" TEXT;
 
+-- usage_periods (20260126000000) FKs company_refs; drop before company_refs is removed
+DO $$
+BEGIN
+  IF to_regclass('public.usage_periods') IS NOT NULL THEN
+    ALTER TABLE "usage_periods" DROP CONSTRAINT IF EXISTS "usage_periods_companyId_fkey";
+  END IF;
+END $$;
+
 -- DropTable
 DROP TABLE "company_access";
 
@@ -357,3 +365,11 @@ ALTER TABLE "api_provisioning" ADD CONSTRAINT "api_provisioning_companyId_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- usage_periods: reattach to companies (ids match company_refs PKs that were migrated separately; empty DB is fine)
+DO $$
+BEGIN
+  IF to_regclass('public.usage_periods') IS NOT NULL THEN
+    ALTER TABLE "usage_periods" ADD CONSTRAINT "usage_periods_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
