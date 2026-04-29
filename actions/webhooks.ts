@@ -151,7 +151,7 @@ export async function createWebhookAction(input: z.infer<typeof CreateWebhookSch
   }
   const actor = toActor(session);
 
-  const parsedEvents = parseWebhookEventsFromText(parsed.data.eventsText);
+  const parsedEvents = parseWebhookEventsText(parsed.data.eventsText);
   if (!parsedEvents.ok) {
     return { ok: false as const, error: parsedEvents.error };
   }

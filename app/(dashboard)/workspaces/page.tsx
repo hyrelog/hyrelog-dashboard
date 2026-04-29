@@ -5,6 +5,8 @@ import { WorkspacesContent } from '@/components/workspaces/list/WorkspacesConten
 import { CreateWorkspaceSheet } from '@/components/workspaces/list/CreateWorkspaceSheet';
 import { prisma } from '@/lib/prisma';
 
+type SupportedDataRegion = 'US' | 'EU' | 'UK' | 'AU';
+
 export default async function WorkspacesPage() {
   const session = await requireDashboardAccess('/workspaces');
 
@@ -23,6 +25,15 @@ export default async function WorkspacesPage() {
       }))?.name ?? undefined
     : undefined;
 
+  // Legacy companies can still have APAC persisted; map to AU for current region options.
+  const preferredRegionRaw = session.company.preferredRegion as string | null | undefined;
+  const companyPreferredRegion: SupportedDataRegion | null =
+    preferredRegionRaw === 'US' || preferredRegionRaw === 'EU' || preferredRegionRaw === 'UK' || preferredRegionRaw === 'AU'
+      ? preferredRegionRaw
+      : preferredRegionRaw === 'APAC'
+        ? 'AU'
+        : null;
+
   return (
     <WorkspacesContent
       workspaces={workspaces}
@@ -31,7 +42,7 @@ export default async function WorkspacesPage() {
       memberWithNoWorkspaces={memberWithNoWorkspaces}
       createButton={
         seeAllWorkspaces ? (
-          <CreateWorkspaceSheet companyPreferredRegion={session.company.preferredRegion} />
+          <CreateWorkspaceSheet companyPreferredRegion={companyPreferredRegion} />
         ) : null
       }
     />

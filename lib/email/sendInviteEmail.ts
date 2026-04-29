@@ -3,7 +3,13 @@ import { render } from '@react-email/render';
 
 import { InviteEmail } from '@/emails/InviteEmail';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    throw new Error('RESEND_API_KEY is not set');
+  }
+  return new Resend(key);
+}
 
 export type SendInviteEmailArgs = {
   to: string;
@@ -48,7 +54,7 @@ export async function sendInviteEmail({
 
   const from = process.env.MAIL_FROM ?? 'HyreLog <no-reply@hyrelog.com>';
 
-  const result = await resend.emails.send({
+  const result = await getResend().emails.send({
     from,
     to,
     subject: `${inviterName} invited you to join ${targetName} on ${productName}`,

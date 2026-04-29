@@ -258,38 +258,46 @@ export function WorkspaceDetailContent({
                 <Copy className="h-3 w-3" />
               </Button>
             </div>
-            {workspace.company.apiCompanyId && (
+            {(() => {
+              const apiCompanyId = workspace.company.apiCompanyId;
+              if (!apiCompanyId) return null;
+              return (
               <div className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
                 <span className="text-muted-foreground">API Company ID</span>
-                <span className="font-mono text-foreground">{workspace.company.apiCompanyId}</span>
+                <span className="font-mono text-foreground">{apiCompanyId}</span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-xs"
                   className="ml-1"
-                  onClick={() => void copyValue('API Company ID', workspace.company.apiCompanyId)}
+                  onClick={() => void copyValue('API Company ID', apiCompanyId)}
                   aria-label="Copy API company ID"
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
-            )}
-            {workspace.apiWorkspaceId && (
+              );
+            })()}
+            {(() => {
+              const apiWorkspaceId = workspace.apiWorkspaceId;
+              if (!apiWorkspaceId) return null;
+              return (
               <div className="flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
                 <span className="text-muted-foreground">API Workspace ID</span>
-                <span className="font-mono text-foreground">{workspace.apiWorkspaceId}</span>
+                <span className="font-mono text-foreground">{apiWorkspaceId}</span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-xs"
                   className="ml-1"
-                  onClick={() => void copyValue('API Workspace ID', workspace.apiWorkspaceId)}
+                  onClick={() => void copyValue('API Workspace ID', apiWorkspaceId)}
                   aria-label="Copy API workspace ID"
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
-            )}
+              );
+            })()}
           </div>
           <div className="flex flex-wrap gap-2 mt-2">
             <Badge variant="secondary">{getDataRegionLabel(effectiveRegion)}</Badge>

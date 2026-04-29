@@ -355,7 +355,7 @@ export function EventsExplorerContent({
 
   const fetchList = (args: {
     page: number;
-    ps: number;
+    ps: PageSize;
     sk: SortKey;
     sd: SortDir;
     f: FilterState;

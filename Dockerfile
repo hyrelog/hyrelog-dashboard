@@ -27,6 +27,12 @@ ARG NEXT_PUBLIC_APP_URL="https://app.hyrelog.com"
 ARG NEXT_PUBLIC_API_BASE_URL="https://api.hyrelog.com"
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ARG BETTER_AUTH_URL="https://app.hyrelog.com"
+ARG BETTER_AUTH_SECRET="build-time-not-for-production"
+ARG RESEND_API_KEY="build-time-not-for-production"
+ENV BETTER_AUTH_URL=${BETTER_AUTH_URL}
+ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+ENV RESEND_API_KEY=${RESEND_API_KEY}
 
 RUN npx prisma generate
 RUN npm run build
@@ -44,6 +50,22 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
+
+# Schema + migrations for one-off ECS tasks: override CMD with `npx prisma migrate deploy`
+# (DATABASE_URL remains injected via task definition Secrets Manager — same as the web server).
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
+
+# Trust AWS RDS TLS: Node's default store can reject the RDS cert chain with @prisma/adapter-pg + `pg`.
+USER root
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl \
+  && curl -fsSL -o /etc/ssl/certs/aws-rds-global-bundle.pem \
+    https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+  && chmod 644 /etc/ssl/certs/aws-rds-global-bundle.pem \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/aws-rds-global-bundle.pem
 
 RUN chown -R node:node /app
 USER node

@@ -1,10 +1,12 @@
-# Build dashboard image, push to ECR, update ECS service (sibling to hyrelog-api)
+# Build dashboard image, push to ECR, update ECS service
 #
-# Required secrets: AWS_REGION, ECR_DASHBOARD_REPOSITORY, ECS_CLUSTER, ECS_SERVICE_DASHBOARD
-# Optional: AWS_DEPLOY_ROLE_ARN (OIDC) OR AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY
-#
-# Run database migrations OUTSIDE this workflow unless your RDS is reachable from GitHub.
-#
+# This workflow uses OIDC role assumption only.
+# Required repository secrets:
+#   AWS_DEPLOY_ROLE_ARN
+#   AWS_REGION
+#   ECR_DASHBOARD_REPOSITORY
+#   ECS_CLUSTER
+#   ECS_SERVICE_DASHBOARD
 name: deploy-production
 
 on:
@@ -27,19 +29,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure AWS (OIDC)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Configure AWS (keys)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN == '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Validate required deploy secrets
+        run: |
+          set -euo pipefail
+          test -n "${{ secrets.ECR_DASHBOARD_REPOSITORY }}"
+          test -n "${{ secrets.ECS_CLUSTER }}"
+          test -n "${{ secrets.ECS_SERVICE_DASHBOARD }}"
 
       - uses: aws-actions/amazon-ecr-login@v2
 
