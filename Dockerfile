@@ -61,6 +61,7 @@ COPY --from=build /app/generated ./generated
 #
 # Standalone `.next` does not ship prisma.config.ts dependencies (`prisma/config`) or reset-script deps.
 # Install Prisma CLI + reset-script runtime packages into /opt/prisma-cli and expose via NODE_PATH/PATH.
+# Seed scripts (resetToDefault.ts) import `country-state-city` — keep in sync with package.json.
 USER root
 ARG PRISMA_MIGRATE_CLI_VERSION=7.7.0
 RUN apt-get update \
@@ -71,7 +72,7 @@ RUN apt-get update \
   && mkdir -p /opt/prisma-cli \
   && cd /opt/prisma-cli \
   && npm init -y \
-  && npm install "prisma@${PRISMA_MIGRATE_CLI_VERSION}" "@prisma/adapter-pg" "pg" "tsx" "dotenv" --omit=dev --ignore-scripts \
+  && npm install "prisma@${PRISMA_MIGRATE_CLI_VERSION}" "@prisma/adapter-pg" "pg" "tsx" "dotenv" "country-state-city@3.2.1" --omit=dev --ignore-scripts \
   && chown -R node:node /opt/prisma-cli \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
