@@ -44,6 +44,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_APP_URL: "https://app.hyrelog.com"
           NEXT_PUBLIC_API_BASE_URL: "https://api.hyrelog.com"
+          BETTER_AUTH_URL: "https://app.hyrelog.com"
+          BETTER_AUTH_SECRET: "ci-better-auth-secret-not-used-in-production"
 
       - name: Verify Docker build
         run: docker build -t hyrelog-dashboard:ci .
