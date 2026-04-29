@@ -115,7 +115,7 @@ export function LoginForm() {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="name@company.com"
+                        placeholder="name@company.com.au"
                         className="pl-10"
                         {...field}
                       />
