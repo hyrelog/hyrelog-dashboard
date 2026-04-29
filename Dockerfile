@@ -54,11 +54,13 @@ COPY --from=build /app/public ./public
 # Schema + Prisma CLI for one-off ECS `prisma migrate deploy`.
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
+# Generated client is required by reset/seed scripts importing ../../generated/prisma/client.
+COPY --from=build /app/generated ./generated
 
 # Trust AWS RDS TLS: Node/pg need the RDS CA bundle alongside NODE_EXTRA_CA_CERTS.
 #
-# Standalone `.next` does not ship prisma.config.ts dependencies (`prisma/config`). Install prisma into
-# /opt/prisma-cli and put it on NODE_PATH/PATH so `prisma migrate` can load prisma.config.ts without `dotenv`.
+# Standalone `.next` does not ship prisma.config.ts dependencies (`prisma/config`) or reset-script deps.
+# Install Prisma CLI + reset-script runtime packages into /opt/prisma-cli and expose via NODE_PATH/PATH.
 USER root
 ARG PRISMA_MIGRATE_CLI_VERSION=7.7.0
 RUN apt-get update \
@@ -69,7 +71,7 @@ RUN apt-get update \
   && mkdir -p /opt/prisma-cli \
   && cd /opt/prisma-cli \
   && npm init -y \
-  && npm install "prisma@${PRISMA_MIGRATE_CLI_VERSION}" --omit=dev --ignore-scripts \
+  && npm install "prisma@${PRISMA_MIGRATE_CLI_VERSION}" "@prisma/adapter-pg" "pg" "tsx" "dotenv" --omit=dev --ignore-scripts \
   && chown -R node:node /opt/prisma-cli \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
