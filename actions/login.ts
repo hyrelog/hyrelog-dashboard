@@ -10,6 +10,7 @@ import { LoginSchema } from '@/schemas/auth';
 import { prisma } from '@/lib/prisma';
 import { safeReturnTo } from '@/lib/auth/redirects';
 import { LoginResult, TokenLookupResult } from '@/types/login';
+import { UserStatus } from '@/generated/prisma/client';
 
 /* ------------------------------------------------------------------
  * Login
@@ -29,6 +30,15 @@ export const login = async (
   const rt = safeReturnTo(callbackURL);
 
   try {
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { status: true }
+    });
+
+    if (existing?.status === UserStatus.DEACTIVATED) {
+      return { error: 'Your account is pending approval. We will email you when approved.' };
+    }
+
     const h = await headers();
 
     const data = await auth.api.signInEmail({

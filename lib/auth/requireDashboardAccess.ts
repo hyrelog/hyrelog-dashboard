@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getFreshSession } from '@/lib/session';
 import { safeReturnTo, toLogin, toCheckEmail, toOnboarding } from '@/lib/auth/redirects';
+import { UserStatus } from '@/generated/prisma/client';
 
 export async function requireDashboardAccess(returnTo?: string) {
   const rt = safeReturnTo(returnTo);
@@ -16,6 +17,15 @@ export async function requireDashboardAccess(returnTo?: string) {
 
   if (!session.user.emailVerified) {
     redirect(toCheckEmail(session.user.email, rt));
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { status: true }
+  });
+
+  if (user?.status === UserStatus.DEACTIVATED) {
+    redirect('/auth/pending-approval');
   }
 
   // User has no company (e.g. invited but not yet accepted) -> send to invites

@@ -20,3 +20,19 @@ export const LoginSchema = z.object({
   rememberMe: z.optional(z.boolean()),
   backupCode: z.optional(z.string())
 });
+
+export const ForgotPasswordSchema = z.object({
+  email: z.email({
+    message: 'Email is required'
+  })
+});
+
+export const ResetPasswordSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, 'Please confirm your password')
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword']
+  });

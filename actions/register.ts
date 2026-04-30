@@ -8,13 +8,15 @@ import {
   CompanyRole,
   WorkspaceRole,
   SubscriptionStatus,
-  AuditAction
+  AuditAction,
+  UserStatus
 } from '@/generated/prisma/client';
 
 import { RegisterSchema } from '@/schemas/register';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { sendVerificationEmail } from '@/lib/email/sendVerificationEmail';
+import { sendAccessRequestAlertToAdmins } from '@/lib/email/sendAccessRequestAlertToAdmins';
 import { EmailCheckResult, RegisterInitialData } from '@/types/register';
 import { ActionResult } from '@/types/global';
 
@@ -104,6 +106,11 @@ export const registerInitial = async (
         message: 'Sign up succeeded but user id was not returned.'
       };
     }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { status: UserStatus.DEACTIVATED }
+    });
 
     function buildCompanySlug(base: string, attempt: number) {
       const companySlugger = new GithubSlugger();
@@ -245,6 +252,15 @@ export const registerInitial = async (
     } catch (emailError) {
       console.error('❌ Failed to send verification email:', emailError);
       // Continue - user is registered, they can request a new email
+    }
+
+    try {
+      await sendAccessRequestAlertToAdmins({
+        requesterName: `${firstName} ${lastName}`.trim(),
+        requesterEmail: email
+      });
+    } catch (notifyError) {
+      console.error('❌ Failed to notify admins of access request:', notifyError);
     }
 
     return {

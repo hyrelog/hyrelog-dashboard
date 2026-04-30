@@ -24,6 +24,7 @@ import type { CompanyRole, Company } from '@/types/dashboard';
 
 interface AppSidebarProps {
   companyRole: CompanyRole;
+  platformRole?: 'HYRELOG_ADMIN' | 'HYRELOG_SUPPORT' | null;
   company: Company;
 }
 
@@ -132,7 +133,7 @@ const navSections: {
   }
 ];
 
-export function AppSidebar({ companyRole, company }: AppSidebarProps) {
+export function AppSidebar({ companyRole, platformRole, company }: AppSidebarProps) {
   const pathname = usePathname();
 
   const hasAccess = (roles?: CompanyRole[]) => {
@@ -217,6 +218,29 @@ export function AppSidebar({ companyRole, company }: AppSidebarProps) {
             </div>
           );
         })}
+        {platformRole === 'HYRELOG_ADMIN' && (
+          <div className="mb-6">
+            <div className="px-4 mb-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Platform Admin
+              </h3>
+            </div>
+            <nav className="space-y-1 px-2">
+              <Link
+                href="/admin/users"
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                  pathname.startsWith('/admin')
+                    ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="flex-1">Users</span>
+              </Link>
+            </nav>
+          </div>
+        )}
       </div>
 
       <Separator />

@@ -49,6 +49,7 @@ export function DashboardShell({
       <div className="hidden md:flex">
         <AppSidebar
           companyRole={user.companyRole}
+          platformRole={user.platformRole}
           company={company}
         />
       </div>
@@ -65,6 +66,7 @@ export function DashboardShell({
           <SheetTitle className="sr-only">Navigation menu</SheetTitle>
           <AppSidebar
             companyRole={user.companyRole}
+            platformRole={user.platformRole}
             company={company}
           />
         </SheetContent>

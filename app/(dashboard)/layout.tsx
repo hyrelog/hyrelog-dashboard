@@ -56,7 +56,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await requireDashboardAccess(pathname);
   if (!session.company) redirect('/invites');
 
-  const [access, companyWithSub] = await Promise.all([
+  const [access, companyWithSub, platformRoleRow] = await Promise.all([
     getCompanyAccess(session.user.id, session.company.id),
     prisma.company.findUnique({
       where: { id: session.company.id },
@@ -70,6 +70,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           }
         }
       }
+    }),
+    prisma.platformRole.findUnique({
+      where: { userId: session.user.id },
+      select: { role: true }
     })
   ]);
 
@@ -97,7 +101,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     firstName: (session.user as { firstName?: string }).firstName ?? '',
     lastName: (session.user as { lastName?: string }).lastName ?? '',
     companyRole: session.userCompany.role,
-    platformRole: (session.user as { platformRole?: User['platformRole'] }).platformRole ?? null
+    platformRole:
+      (session.user as { platformRole?: User['platformRole'] }).platformRole ??
+      platformRoleRow?.role ??
+      null
   };
 
   const sub = companyWithSub?.subscription;

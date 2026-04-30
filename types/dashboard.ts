@@ -1,5 +1,5 @@
 export type CompanyRole = 'OWNER' | 'ADMIN' | 'BILLING' | 'MEMBER';
-export type PlatformRole = 'PLATFORM_ADMIN' | null;
+export type PlatformRole = 'HYRELOG_ADMIN' | 'HYRELOG_SUPPORT' | null;
 
 export interface User {
   id: string;
