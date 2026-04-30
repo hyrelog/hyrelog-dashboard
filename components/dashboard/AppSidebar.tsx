@@ -153,6 +153,7 @@ export function AppSidebar({ companyRole, company }: AppSidebarProps) {
             width={180}
             height={40}
             className="dark:hidden"
+            style={{ width: 'auto', height: 'auto' }}
             priority
           />
           <Image
@@ -161,6 +162,7 @@ export function AppSidebar({ companyRole, company }: AppSidebarProps) {
             width={180}
             height={40}
             className="hidden dark:block"
+            style={{ width: 'auto', height: 'auto' }}
             priority
           />
         </Link>

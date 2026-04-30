@@ -55,6 +55,7 @@ export default async function VerifyEmailPage({
               width={200}
               height={60}
               className="mb-8"
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
           <div className="space-y-6">
@@ -81,6 +82,7 @@ export default async function VerifyEmailPage({
               alt="HyreLog"
               width={180}
               height={54}
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
           {!token || !cid || !isValid.valid ? (

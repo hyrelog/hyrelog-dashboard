@@ -24,6 +24,7 @@ export default async function CheckEmailPage({
               width={200}
               height={60}
               className="mb-8"
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
           <div className="space-y-6">
@@ -48,6 +49,7 @@ export default async function CheckEmailPage({
               alt="HyreLog"
               width={180}
               height={54}
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
 

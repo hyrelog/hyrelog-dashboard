@@ -13,6 +13,7 @@ export default function NotFound() {
             width={160}
             height={48}
             className="dark:hidden block"
+            style={{ width: 'auto', height: 'auto' }}
           />
           <Image
             src="/images/logoDark.png"
@@ -20,6 +21,7 @@ export default function NotFound() {
             width={160}
             height={48}
             className="hidden dark:block"
+            style={{ width: 'auto', height: 'auto' }}
           />
         </div>
 

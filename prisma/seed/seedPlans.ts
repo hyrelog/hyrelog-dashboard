@@ -1,6 +1,7 @@
 import { PlanStatus, PlanType } from '../../generated/prisma/client';
 
 export const HYRELOG_PLANS = [
+  // Dashboard Plan has no isDefault; API Plan keeps isDefault on FREE for catalog only — signup/provision default is BUSINESS in app + API env.
   {
     code: 'FREE',
     name: 'Free',

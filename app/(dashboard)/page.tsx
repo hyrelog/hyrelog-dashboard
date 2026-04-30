@@ -1,8 +1,7 @@
-import { isCompanyAdmin } from '@/actions/dashboard';
+import { getDashboardHomeData, isCompanyAdmin } from '@/actions/dashboard';
 import { DashboardHomeWithSession } from '@/components/dashboard/DashboardHomeWithSession';
 import { requireDashboardAccess } from '@/lib/auth/requireDashboardAccess';
 import { getSubscriptionSummary, getUsageSummary } from '@/actions/billing';
-import { mockProjects, mockMembers } from '@/lib/data/dashboard-mock';
 
 export default async function HomePage() {
   const session = await requireDashboardAccess('/');
@@ -10,9 +9,14 @@ export default async function HomePage() {
   const role = session.userCompany.role;
   const admin = isCompanyAdmin(role);
 
-  const [subResult, usageResult] = await Promise.all([
+  const [subResult, usageResult, { projects, members }] = await Promise.all([
     getSubscriptionSummary(),
     getUsageSummary(),
+    getDashboardHomeData({
+      companyId: session.company.id,
+      userId: session.user.id,
+      isCompanyAdmin: admin
+    })
   ]);
 
   const billingInfo = {
@@ -40,8 +44,8 @@ export default async function HomePage() {
 
   return (
     <DashboardHomeWithSession
-      projects={mockProjects}
-      members={mockMembers}
+      projects={projects}
+      members={members}
       billingInfo={billingInfo}
     />
   );

@@ -38,7 +38,7 @@ export function DashboardShell({
   // Breadcrumb logic
   const breadcrumb = currentWorkspace
     ? [{ label: 'Workspaces', href: '/workspaces' }, { label: currentWorkspace.name }]
-    : [{ label: 'Company' }];
+    : [];
 
   // Show workspace switcher for admins or users with multiple workspaces
   const showWorkspaceSwitcher = isCompanyAdmin || workspaces.length > 1;

@@ -85,12 +85,13 @@ export const registerInitial = async (
       }
     });
 
-    const plan = await prisma.plan.findUnique({ where: { code: 'FREE' } });
+    // Alpha: self-serve signups get Business (dashboard entitlements); toggle to FREE post-launch if needed.
+    const plan = await prisma.plan.findUnique({ where: { code: 'BUSINESS' } });
 
     if (!plan) {
       return {
         success: false,
-        message: 'Default plan not found'
+        message: 'BUSINESS plan not found — ensure prisma seedPlans has run'
       };
     }
 

@@ -14,6 +14,7 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
             width={160}
             height={48}
             className="dark:block hidden"
+            style={{ width: 'auto', height: 'auto' }}
           />
           <Image
             src="/images/logoLight.png"
@@ -21,6 +22,7 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
             width={160}
             height={48}
             className="dark:hidden block"
+            style={{ width: 'auto', height: 'auto' }}
           />
         </div>
 
