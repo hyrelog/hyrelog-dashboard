@@ -728,10 +728,13 @@ function WorkspaceProjectsTab({
                   key={p.id}
                   className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{p.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {p.slug} · {new Date(p.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 font-mono break-all">
+                      Project ID: {p.id}
                     </p>
                   </div>
                   <div className="flex gap-2 shrink-0">

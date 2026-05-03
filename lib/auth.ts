@@ -6,6 +6,7 @@ import { Gender, PlatformRoleType } from '@/generated/prisma/client';
 import { customSession, openAPI } from 'better-auth/plugins';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, verifyPassword } from '@/lib/argon2';
+import { sendResetPasswordEmail } from '@/lib/email/sendResetPasswordEmail';
 // import { sendVerificationEmail, sendResetEmail } from '@/lib/mail';
 
 const options = {
@@ -28,12 +29,11 @@ const options = {
     // We gate onboarding and post-login flows on emailVerified instead of blocking session creation here.
     requireEmailVerification: false,
     sendResetPassword: async ({ user, url }) => {
-      //   await sendResetEmail({
-      //     email: user.email,
-      //     link: url,
-      //     name: user.name
-      //   });
-      console.log('sendResetPassword', user, url);
+      await sendResetPasswordEmail({
+        email: user.email,
+        firstName: (user as { firstName?: string }).firstName,
+        resetUrl: url
+      });
     }
   },
   advanced: {

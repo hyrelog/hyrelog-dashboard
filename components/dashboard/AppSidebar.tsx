@@ -16,7 +16,8 @@ import {
   HelpCircle,
   Globe,
   BookOpen,
-  Activity
+  Activity,
+  BarChart3
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -230,13 +231,25 @@ export function AppSidebar({ companyRole, platformRole, company }: AppSidebarPro
                 href="/admin/users"
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
-                  pathname.startsWith('/admin')
+                  pathname.startsWith('/admin/users')
                     ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
                 <Users className="h-4 w-4 shrink-0" />
                 <span className="flex-1">Users</span>
+              </Link>
+              <Link
+                href="/admin/stats"
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+                  pathname.startsWith('/admin/stats')
+                    ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
+                <BarChart3 className="h-4 w-4 shrink-0" />
+                <span className="flex-1">Statistics</span>
               </Link>
             </nav>
           </div>
