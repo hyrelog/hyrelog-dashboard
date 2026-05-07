@@ -338,7 +338,7 @@ export async function getDashboardWebhooks(
 }
 
 export async function createDashboardWebhook(
-  params: { workspaceId: string; url: string; events?: string[]; projectId?: string | null },
+  params: { workspaceId: string; url: string; events?: string[]; projectId?: string | null; customSecret?: string },
   actor: ActorHeaders & { companyId: string }
 ): Promise<DashboardWebhookCreateResponse> {
   const { data } = await hyrelogRequest<DashboardWebhookCreateResponse>(

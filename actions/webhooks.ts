@@ -38,12 +38,24 @@ function parseWebhookEventsText(text: string): { ok: true; events: string[] } | 
   return { ok: true, events: unique };
 }
 
-const CreateWebhookSchema = z.object({
-  workspaceId: z.string().uuid(),
-  url: z.string().url(),
-  projectId: z.string().uuid().optional().or(z.literal('')),
-  eventsText: z.string(),
-});
+const CreateWebhookSchema = z
+  .object({
+    workspaceId: z.string().uuid(),
+    url: z.string().url(),
+    projectId: z.string().uuid().optional().or(z.literal('')),
+    eventsText: z.string(),
+    customSecret: z.string().max(256).optional().or(z.literal('')),
+  })
+  .superRefine((data, ctx) => {
+    const secret = data.customSecret?.trim();
+    if (secret && secret.length < 8) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['customSecret'],
+        message: 'Custom secret must be at least 8 characters.',
+      });
+    }
+  });
 
 function toActor(session: Awaited<ReturnType<typeof requireDashboardAccess>>) {
   return {
@@ -163,6 +175,7 @@ export async function createWebhookAction(input: z.infer<typeof CreateWebhookSch
         url: parsed.data.url,
         events: parsedEvents.events,
         projectId: parsed.data.projectId ? parsed.data.projectId : null,
+        customSecret: parsed.data.customSecret?.trim() ? parsed.data.customSecret.trim() : undefined,
       },
       actor
     );
