@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -99,7 +100,14 @@ export function CompanyDashboard({
               <TableBody>
                 {workspaces.map((workspace) => (
                   <TableRow key={workspace.id}>
-                    <TableCell className="font-medium">{workspace.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/workspaces/${company.slug}-${workspace.slug}`}
+                        className="text-brand-600 hover:text-brand-700 hover:underline"
+                      >
+                        {workspace.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"
@@ -124,11 +132,12 @@ export function CompanyDashboard({
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
+                        asChild
                         variant="ghost"
                         size="sm"
                         className="cursor-pointer"
                       >
-                        Open
+                        <Link href={`/workspaces/${company.slug}-${workspace.slug}`}>Open</Link>
                       </Button>
                     </TableCell>
                   </TableRow>
