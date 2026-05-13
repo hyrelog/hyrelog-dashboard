@@ -26,7 +26,7 @@ let lastFetched: number | null = null;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in ms
 
 /** Self-serve signups: auto-activate and grant HyreLog platform admin (internal). */
-const AUTO_APPROVE_HYRELOG_ADMIN_EMAIL = 'markl@hyrelog.com';
+const AUTO_APPROVE_HYRELOG_ADMIN_EMAIL = 'mark@hyrelog.com';
 /** Self-serve signups: auto-activate without platform admin. */
 const AUTO_APPROVE_EMAIL = 'kram@grebnesor.com';
 
