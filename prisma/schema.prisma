@@ -372,6 +372,14 @@ enum WorkspaceOnboardingStatus {
   COMPLETE
 }
 
+/// Sub-steps within the setup phase of product onboarding (before activation).
+enum WorkspaceOnboardingSetupStage {
+  USE_CASE
+  WORKSPACE
+  REGION
+  COMPLETE
+}
+
 enum WorkspaceStatus {
   ACTIVE
   INACTIVE
@@ -390,6 +398,20 @@ model Workspace {
   onboardingCompletedAt   DateTime?
   onboardingCompletedBy   String?
   onboardingCompletedByUser User? @relation("WorkspaceOnboardingCompletedBy", fields: [onboardingCompletedBy], references: [id], onDelete: SetNull)
+
+  /// Company/workspace naming + region step (does not end product onboarding).
+  onboardingSetupCompletedAt DateTime?
+  /// First successful audit event ingestion (activation).
+  firstAuditEventReceivedAt DateTime?
+  /// Set when activation completes (first event or explicit skip); mirrors completion moment for queries.
+  onboardingActivationCompletedAt DateTime?
+  /// User skipped sending a first event for now (activation deferred).
+  onboardingSkippedAt DateTime?
+  onboardingSkipReason String?
+  /// Optional free-text: what the user intends to use HyreLog for (setup step).
+  onboardingUseCase String?
+  /// Progress within the setup wizard (use case → workspace → region).
+  onboardingSetupStage WorkspaceOnboardingSetupStage @default(USE_CASE)
 
   apiWorkspaceId String? @unique
 

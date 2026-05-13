@@ -1,19 +1,20 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
 import { getPostLoginDestination } from '@/lib/auth/postLoginRoute';
 import { safeReturnTo } from '@/lib/auth/redirects';
+import { getFreshSession } from '@/lib/session';
 
+/**
+ * Must use the same session resolution as gated pages (`getFreshSession`).
+ * Otherwise users can loop: login sees a cached session → onboarding, onboarding uses fresh read → no session → login.
+ */
 export async function redirectIfLoggedIn(callbackURL?: string) {
   const rt = safeReturnTo(callbackURL);
 
-  const h = await headers();
-  const session = await auth.api.getSession({ headers: h });
+  const session = await getFreshSession();
+  if (!session?.user?.id) return null;
 
-  if (!session) return null;
-
-  const dest = await getPostLoginDestination(session as any, rt);
+  const dest = await getPostLoginDestination(session as never, rt);
   redirect(dest);
 }

@@ -6,9 +6,25 @@ import { prisma } from '@/lib/prisma';
 
 const INITIAL_PAGE_SIZE = 10;
 
-export default async function EventsPage() {
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ workspaceId?: string }>;
+}) {
   const session = await requireDashboardAccess('/events');
   const companyId = (session as { company: { id: string } }).company.id;
+
+  const sp = await searchParams;
+  const rawWs = typeof sp.workspaceId === 'string' ? sp.workspaceId.trim() : '';
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  let initialWorkspaceApiId: string | null = null;
+  if (rawWs && uuidRe.test(rawWs)) {
+    const row = await prisma.workspace.findFirst({
+      where: { id: rawWs, companyId, deletedAt: null },
+      select: { apiWorkspaceId: true },
+    });
+    initialWorkspaceApiId = row?.apiWorkspaceId ?? null;
+  }
 
   const [initial, filterOpts, workspaces] = await Promise.all([
     getEventsAction({
@@ -16,11 +32,14 @@ export default async function EventsPage() {
       offset: 0,
       sort: 'timestamp',
       order: 'desc',
+      ...(initialWorkspaceApiId ? { workspaceId: initialWorkspaceApiId } : {}),
     }),
-    getEventsFilterOptionsAction({}),
+    getEventsFilterOptionsAction(
+      initialWorkspaceApiId ? { workspaceId: initialWorkspaceApiId } : {}
+    ),
     prisma.workspace.findMany({
       where: { companyId, deletedAt: null },
-      select: { id: true, name: true },
+      select: { id: true, name: true, apiWorkspaceId: true },
     }),
   ]);
   const apiConfigured = isHyreLogApiConfigured();
@@ -39,6 +58,7 @@ export default async function EventsPage() {
           : initial.error
       }
       workspaces={workspaces}
+      initialWorkspaceApiId={initialWorkspaceApiId}
       apiConfigured={apiConfigured}
     />
   );

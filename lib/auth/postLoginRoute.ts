@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { safeReturnTo, toCheckEmail, toOnboarding } from '@/lib/auth/redirects';
+import { findWorkspaceIdPendingProductOnboarding } from '@/lib/onboarding/eligibility';
 import { normalizeEmail } from '@/lib/members/utils';
 import type { SessionShape } from '@/types/auth';
 
@@ -38,17 +39,9 @@ export async function getPostLoginDestination(session: SessionWithOptionalCompan
 
   const isCreator = session.company.createdByUserId === session.user.id;
   if (isCreator) {
-    const pending = await prisma.workspace.findFirst({
-      where: {
-        companyId: session.company.id,
-        deletedAt: null,
-        onboardingStatus: 'PENDING'
-      },
-      orderBy: [{ createdAt: 'asc' }],
-      select: { id: true }
-    });
-    if (pending) {
-      return toOnboarding(pending.id, rt);
+    const workspacePendingId = await findWorkspaceIdPendingProductOnboarding(session.company.id);
+    if (workspacePendingId) {
+      return toOnboarding(workspacePendingId, rt);
     }
   }
 

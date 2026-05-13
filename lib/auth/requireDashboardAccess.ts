@@ -4,6 +4,10 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getFreshSession } from '@/lib/session';
 import { safeReturnTo, toLogin, toCheckEmail, toOnboarding } from '@/lib/auth/redirects';
+import {
+  findWorkspaceIdNeedingSetup,
+  findWorkspaceIdPendingProductOnboarding,
+} from '@/lib/onboarding/eligibility';
 import { UserStatus } from '@/generated/prisma/client';
 
 export async function requireDashboardAccess(returnTo?: string) {
@@ -36,18 +40,26 @@ export async function requireDashboardAccess(returnTo?: string) {
 
   const isCreator = sessionWithCompany.company.createdByUserId === session.user.id;
   if (isCreator) {
-    const pending = await prisma.workspace.findFirst({
-      where: {
-        companyId: sessionWithCompany.company.id,
-        deletedAt: null,
-        onboardingStatus: 'PENDING'
-      },
-      orderBy: [{ createdAt: 'asc' }],
-      select: { id: true }
-    });
+    const companyId = sessionWithCompany.company.id;
+    const needingSetupId = await findWorkspaceIdNeedingSetup(companyId);
+    if (needingSetupId) {
+      redirect(toOnboarding(needingSetupId, rt));
+    }
 
-    if (pending) {
-      redirect(toOnboarding(pending.id, rt));
+    const pendingActivationId = await findWorkspaceIdPendingProductOnboarding(companyId);
+    if (pendingActivationId) {
+      const ws = await prisma.workspace.findUnique({
+        where: { id: pendingActivationId },
+        select: { onboardingSetupCompletedAt: true }
+      });
+      if (ws?.onboardingSetupCompletedAt != null) {
+        const pathOnly = rt.split('?')[0]?.split('#')[0] ?? '/';
+        const allowedDuringActivation =
+          pathOnly === '/events' || pathOnly.startsWith('/events/');
+        if (!allowedDuringActivation) {
+          redirect(toOnboarding(pendingActivationId, rt));
+        }
+      }
     }
   }
 

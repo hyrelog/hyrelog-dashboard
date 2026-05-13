@@ -2,8 +2,13 @@ import { AuthLayout } from '@/components/auth/AuthLayout';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { redirectIfLoggedIn } from '@/lib/auth/isLoggedInRedirect';
 
-export default async function LoginPage() {
-  await redirectIfLoggedIn();
+export default async function LoginPage({
+  searchParams
+}: {
+  searchParams: Promise<{ callbackURL?: string }>;
+}) {
+  const sp = await searchParams;
+  await redirectIfLoggedIn(sp.callbackURL);
 
   return (
     <AuthLayout

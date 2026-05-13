@@ -76,6 +76,7 @@ async function main() {
         preferredRegion: randomRegion(),
         status: randomStatus(),
         onboardingStatus: 'COMPLETE',
+        onboardingSetupStage: 'COMPLETE',
         onboardingCompletedAt: today,
         onboardingCompletedBy: ONBOARDING_COMPLETED_BY_USER_ID
       }

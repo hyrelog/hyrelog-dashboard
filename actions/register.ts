@@ -9,7 +9,8 @@ import {
   WorkspaceRole,
   SubscriptionStatus,
   AuditAction,
-  UserStatus
+  UserStatus,
+  PlatformRoleType
 } from '@/generated/prisma/client';
 
 import { RegisterSchema } from '@/schemas/register';
@@ -23,6 +24,19 @@ import { ActionResult } from '@/types/global';
 let cachedDomains: string[] | null = null;
 let lastFetched: number | null = null;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in ms
+
+/** Self-serve signups: auto-activate and grant HyreLog platform admin (internal). */
+const AUTO_APPROVE_HYRELOG_ADMIN_EMAIL = 'markl@hyrelog.com';
+/** Self-serve signups: auto-activate without platform admin. */
+const AUTO_APPROVE_EMAIL = 'kram@grebnesor.com';
+
+function registrationEmailFlags(email: string) {
+  const norm = email.trim().toLowerCase();
+  return {
+    hyrelogAutoAdmin: norm === AUTO_APPROVE_HYRELOG_ADMIN_EMAIL,
+    grebnesorAutoApprove: norm === AUTO_APPROVE_EMAIL
+  };
+}
 
 /* ------------------------------------------------------------------
  * registerInitial
@@ -107,10 +121,27 @@ export const registerInitial = async (
       };
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { status: UserStatus.DEACTIVATED }
-    });
+    const { hyrelogAutoAdmin, grebnesorAutoApprove } = registrationEmailFlags(email);
+    const autoApproved = hyrelogAutoAdmin || grebnesorAutoApprove;
+
+    if (autoApproved) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { status: UserStatus.ACTIVE }
+      });
+      if (hyrelogAutoAdmin) {
+        await prisma.platformRole.upsert({
+          where: { userId },
+          create: { userId, role: PlatformRoleType.HYRELOG_ADMIN },
+          update: { role: PlatformRoleType.HYRELOG_ADMIN }
+        });
+      }
+    } else {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { status: UserStatus.DEACTIVATED }
+      });
+    }
 
     function buildCompanySlug(base: string, attempt: number) {
       const companySlugger = new GithubSlugger();
@@ -255,10 +286,12 @@ export const registerInitial = async (
     }
 
     try {
-      await sendAccessRequestAlertToAdmins({
-        requesterName: `${firstName} ${lastName}`.trim(),
-        requesterEmail: email
-      });
+      if (!autoApproved) {
+        await sendAccessRequestAlertToAdmins({
+          requesterName: `${firstName} ${lastName}`.trim(),
+          requesterEmail: email
+        });
+      }
     } catch (notifyError) {
       console.error('❌ Failed to notify admins of access request:', notifyError);
     }

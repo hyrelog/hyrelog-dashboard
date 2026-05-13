@@ -1,13 +1,12 @@
 import Image from 'next/image';
 
-import { OnboardingLayoutProps } from '@/types/onboarding';
+import type { OnboardingLayoutProps } from '@/types/onboarding';
 
-export function OnboardingLayout({ children }: OnboardingLayoutProps) {
+export function OnboardingLayout({ sidebar, children }: OnboardingLayoutProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background-subtle">
-      <div className="w-full max-w-lg">
-        {/* Logo */}
-        <div className="mb-8 flex justify-center">
+    <div className="min-h-screen bg-background-subtle px-4 py-8 md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-10 flex justify-center md:justify-start">
           <Image
             src="/images/logoDark.png"
             alt="HyreLog"
@@ -26,7 +25,14 @@ export function OnboardingLayout({ children }: OnboardingLayoutProps) {
           />
         </div>
 
-        {children}
+        <div className="grid gap-8 lg:grid-cols-[minmax(220px,260px)_1fr] lg:gap-12 lg:items-start">
+          <aside className="rounded-xl border border-border bg-card/80 p-4 shadow-sm lg:sticky lg:top-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Progress</p>
+            {sidebar}
+          </aside>
+
+          <main className="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">{children}</main>
+        </div>
       </div>
     </div>
   );

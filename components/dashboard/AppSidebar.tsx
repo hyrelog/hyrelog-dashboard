@@ -27,6 +27,8 @@ interface AppSidebarProps {
   companyRole: CompanyRole;
   platformRole?: 'HYRELOG_ADMIN' | 'HYRELOG_SUPPORT' | null;
   company: Company;
+  /** Called when a nav link is activated (e.g. close mobile sheet on route change). */
+  onNavigate?: () => void;
 }
 
 interface NavItem {
@@ -134,7 +136,7 @@ const navSections: {
   }
 ];
 
-export function AppSidebar({ companyRole, platformRole, company }: AppSidebarProps) {
+export function AppSidebar({ companyRole, platformRole, company, onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
 
   const hasAccess = (roles?: CompanyRole[]) => {
@@ -148,6 +150,7 @@ export function AppSidebar({ companyRole, platformRole, company }: AppSidebarPro
         <Link
           href="/"
           className="block"
+          onClick={onNavigate}
         >
           <Image
             src="/images/logoLight.png"
@@ -195,6 +198,7 @@ export function AppSidebar({ companyRole, platformRole, company }: AppSidebarPro
                     <Link
                       key={item.href}
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                         isActive
@@ -229,6 +233,7 @@ export function AppSidebar({ companyRole, platformRole, company }: AppSidebarPro
             <nav className="space-y-1 px-2">
               <Link
                 href="/admin/users"
+                onClick={onNavigate}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                   pathname.startsWith('/admin/users')
@@ -241,6 +246,7 @@ export function AppSidebar({ companyRole, platformRole, company }: AppSidebarPro
               </Link>
               <Link
                 href="/admin/stats"
+                onClick={onNavigate}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                   pathname.startsWith('/admin/stats')
@@ -277,6 +283,7 @@ export function AppSidebar({ companyRole, platformRole, company }: AppSidebarPro
 
         <Link
           href="/help"
+          onClick={onNavigate}
           className="flex items-center gap-2 text-xs text-brand-500 hover:text-brand-600 transition-colors cursor-pointer"
         >
           <HelpCircle className="h-3 w-3" />

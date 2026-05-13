@@ -148,6 +148,7 @@ export async function createWorkspaceAction(input: z.infer<typeof CreateWorkspac
         status: 'ACTIVE',
         isAutoNamed: false,
         onboardingStatus: 'COMPLETE',
+        onboardingSetupStage: 'COMPLETE',
         onboardingCompletedAt: now,
         onboardingCompletedBy: session.user.id
       },

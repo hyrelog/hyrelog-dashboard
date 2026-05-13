@@ -131,14 +131,13 @@ const options = {
     accountLinking: {
       enabled: false
     }
-  },
-  plugins: [nextCookies()]
+  }
 } satisfies BetterAuthOptions;
 
 export const auth = betterAuth({
   ...options,
+  // nextCookies must be last so other plugins' Set-Cookie headers are forwarded to Next.js.
   plugins: [
-    ...(options.plugins ?? []),
     customSession(async ({ user, session }, ctx) => {
       const userCompany = await prisma.companyMember.findFirst({
         where: { userId: user.id },
@@ -154,7 +153,8 @@ export const auth = betterAuth({
         userCompany
       };
     }, options),
-    openAPI()
+    openAPI(),
+    nextCookies()
   ]
 });
 

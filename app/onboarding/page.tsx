@@ -1,47 +1,56 @@
-import { OnboardingLayout } from '@/components/onboarding/OnboardingLayout';
-import { OnboardingForm } from '@/components/onboarding/OnboardingForm';
-import { loadOnboardingData } from '@/actions/onboarding';
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
+import { loadOnboardingData, loadOnboardingActivationSuccessData } from '@/actions/onboarding';
 import { checkOnboardingRequired } from '@/lib/auth/checkOnboardingRequired';
-
-type SupportedDataRegion = 'US' | 'EU' | 'UK' | 'AU';
+import type { LoadedOnboardingWorkspace } from '@/types/onboarding';
+import { getResolvedWizardServerStep } from '@/lib/onboarding/eligibility';
+import type { WizardStepId } from '@/lib/onboarding/constants';
 
 export default async function OnboardingPage({
   searchParams
 }: {
   searchParams: Promise<{ returnTo?: string }>;
 }) {
-  const { session, workspaceId } = await checkOnboardingRequired();
-
-  const { company } = session;
-
   const sp = await searchParams;
-  const data = await loadOnboardingData({
-    workspaceId: workspaceId,
-    returnTo: sp.returnTo
-  });
+  const gate = await checkOnboardingRequired(sp.returnTo);
 
-  const preferredRegionRaw = data.workspace?.preferredRegion;
-  const preferredRegion: SupportedDataRegion | undefined =
-    preferredRegionRaw === 'US' || preferredRegionRaw === 'EU' || preferredRegionRaw === 'UK' || preferredRegionRaw === 'AU'
-      ? preferredRegionRaw
-      : preferredRegionRaw === 'APAC'
-        ? 'AU'
-        : undefined;
+  const data = gate.postActivationSuccess
+    ? await loadOnboardingActivationSuccessData({
+        workspaceId: gate.workspaceId,
+        returnTo: sp.returnTo
+      })
+    : await loadOnboardingData({
+        workspaceId: gate.workspaceId,
+        returnTo: sp.returnTo
+      });
 
-  const returnData = {
-    workspaceId: workspaceId,
-    workspaceName: data.workspace?.name,
-    companyName: data.company?.name,
-    preferredRegion,
-    returnTo: sp.returnTo
+  const w = data.workspace;
+  const wizardWorkspace: LoadedOnboardingWorkspace = {
+    id: w.id,
+    name: w.name,
+    slug: w.slug,
+    preferredRegion: w.preferredRegion ?? null,
+    onboardingStatus: w.onboardingStatus,
+    onboardingUseCase: w.onboardingUseCase,
+    onboardingSetupStage: w.onboardingSetupStage,
+    onboardingSetupCompletedAt: w.onboardingSetupCompletedAt,
+    onboardingActivationCompletedAt: w.onboardingActivationCompletedAt,
+    onboardingSkippedAt: w.onboardingSkippedAt,
+    firstAuditEventReceivedAt: w.firstAuditEventReceivedAt,
+    apiWorkspaceId: w.apiWorkspaceId,
+    activeApiKeyCount: w.activeApiKeyCount
   };
 
+  const serverStep: WizardStepId = gate.postActivationSuccess
+    ? 'activation-success'
+    : getResolvedWizardServerStep(wizardWorkspace);
+
   return (
-    <OnboardingLayout>
-      <OnboardingForm
-        data={returnData}
-        isAutoNamed={company?.isAutoNamed}
-      />
-    </OnboardingLayout>
+    <OnboardingWizard
+      serverStep={serverStep}
+      workspace={wizardWorkspace}
+      companyName={data.company.name}
+      companyIsAutoNamed={data.company.isAutoNamed}
+      returnTo={sp.returnTo}
+    />
   );
 }

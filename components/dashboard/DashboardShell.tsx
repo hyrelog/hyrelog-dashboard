@@ -68,6 +68,7 @@ export function DashboardShell({
             companyRole={user.companyRole}
             platformRole={user.platformRole}
             company={company}
+            onNavigate={() => setIsMobileSidebarOpen(false)}
           />
         </SheetContent>
       </Sheet>

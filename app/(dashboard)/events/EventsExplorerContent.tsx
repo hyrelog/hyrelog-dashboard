@@ -63,7 +63,7 @@ type Event = {
   userAgent?: string | null;
 };
 
-type Workspace = { id: string; name: string };
+type Workspace = { id: string; name: string; apiWorkspaceId: string | null };
 
 type SearchableFilterOption = string | { value: string; label: string };
 
@@ -316,6 +316,7 @@ export function EventsExplorerContent({
   initialActions,
   initialError,
   workspaces,
+  initialWorkspaceApiId,
   apiConfigured,
 }: {
   initialEvents: Event[];
@@ -324,6 +325,8 @@ export function EventsExplorerContent({
   initialActions: string[];
   initialError: string | null;
   workspaces: Workspace[];
+  /** HyreLog API workspace id (resolved from optional `?workspaceId=` dashboard workspace id on the server). */
+  initialWorkspaceApiId?: string | null;
   apiConfigured: boolean;
 }) {
   const [events, setEvents] = useState<Event[]>(initialEvents);
@@ -337,13 +340,13 @@ export function EventsExplorerContent({
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('timestamp');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [filters, setFilters] = useState<FilterState>({
-    workspaceId: '',
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    workspaceId: initialWorkspaceApiId ?? '',
     category: '',
     action: '',
     from: '',
     to: '',
-  });
+  }));
 
   const pageCount = useMemo(
     () => (total > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1),
@@ -490,11 +493,13 @@ export function EventsExplorerContent({
               label="Workspace"
               value={filters.workspaceId}
               onChange={(v) => setFilters((f) => ({ ...f, workspaceId: v }))}
-              options={workspaces.map((w) => ({ value: w.id, label: w.name }))}
+              options={workspaces
+                .filter((w): w is Workspace & { apiWorkspaceId: string } => Boolean(w.apiWorkspaceId))
+                .map((w) => ({ value: w.apiWorkspaceId, label: w.name }))}
               searchPlaceholder="Search workspaces…"
               anyLabel="All workspaces"
               allowCustom={false}
-              emptyHint="No workspaces in this company"
+              emptyHint="No provisioned workspaces in this company"
               triggerClassName="w-full min-w-[200px]"
             />
             <SearchableFilterDropdown
