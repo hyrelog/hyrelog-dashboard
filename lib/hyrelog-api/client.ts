@@ -24,6 +24,8 @@ export interface ActorHeaders {
   userEmail?: string;
   userRole?: string;
   companyId?: string;
+  /** HyreLog workspace UUIDs the member may access (x-export-workspace-ids). Omit for company-level roles. */
+  exportWorkspaceIds?: string[];
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
@@ -68,6 +70,9 @@ export async function hyrelogRequest<T = unknown>(
   if (actor?.userEmail) headers['x-user-email'] = actor.userEmail;
   if (actor?.userRole) headers['x-user-role'] = actor.userRole;
   if (actor?.companyId) headers['x-company-id'] = actor.companyId;
+  if (actor?.exportWorkspaceIds?.length) {
+    headers['x-export-workspace-ids'] = actor.exportWorkspaceIds.join(',');
+  }
 
   const url = path.startsWith('http') ? path : `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   let lastError: Error | null = null;
@@ -88,7 +93,10 @@ export async function hyrelogRequest<T = unknown>(
       try {
         data = text ? (JSON.parse(text) as T | ApiError) : ({} as T);
       } catch {
-        data = { code: 'INVALID_JSON', error: text || res.statusText } as ApiError;
+        data = {
+          code: 'INVALID_JSON',
+          error: 'Invalid JSON response from HyreLog API',
+        } as ApiError;
       }
 
       if (res.ok) {

@@ -11,6 +11,7 @@ const workspaceListSelect = {
   id: true,
   name: true,
   slug: true,
+  apiWorkspaceId: true,
   preferredRegion: true,
   createdAt: true,
   _count: { select: { members: true } },
@@ -43,6 +44,8 @@ export async function listWorkspacesForUser(userId: string) {
       workspace: {
         select: {
           id: true,
+          companyId: true,
+          apiWorkspaceId: true,
           name: true,
           slug: true,
           status: true,

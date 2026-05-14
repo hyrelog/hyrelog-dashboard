@@ -229,6 +229,33 @@ export interface DashboardEventsResponse {
   total: number;
 }
 
+export interface DashboardEventHistogramParams {
+  from: string;
+  to: string;
+  interval: 'minute' | 'hour' | 'day';
+  groupBy?: 'none' | 'category' | 'action' | 'workspace' | 'region';
+  workspaceId?: string;
+  projectId?: string;
+  category?: string;
+  action?: string;
+}
+
+export interface DashboardEventHistogramResponse {
+  buckets: Array<{
+    start: string;
+    end: string;
+    count: number;
+    groups?: Array<{ key: string; count: number }>;
+  }>;
+  meta: {
+    from: string;
+    to: string;
+    interval: 'minute' | 'hour' | 'day';
+    groupBy: 'none' | 'category' | 'action' | 'workspace' | 'region';
+    partial: boolean;
+  };
+}
+
 export interface DashboardEventFilterOptionsParams {
   from?: string;
   to?: string;
@@ -263,6 +290,27 @@ export async function getDashboardEvents(
   return data;
 }
 
+export async function getDashboardEventHistogram(
+  params: DashboardEventHistogramParams,
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardEventHistogramResponse> {
+  const search = new URLSearchParams();
+  search.set('from', params.from);
+  search.set('to', params.to);
+  search.set('interval', params.interval);
+  search.set('groupBy', params.groupBy ?? 'none');
+  if (params.workspaceId) search.set('workspaceId', params.workspaceId);
+  if (params.projectId) search.set('projectId', params.projectId);
+  if (params.category) search.set('category', params.category);
+  if (params.action) search.set('action', params.action);
+  const q = search.toString();
+  const path = `${DASHBOARD_PREFIX}/events/metrics/histogram?${q}`;
+  const { data } = await hyrelogRequest<DashboardEventHistogramResponse>(path, {
+    actor: { ...actor, companyId: actor.companyId },
+  });
+  return data;
+}
+
 export async function getDashboardEventFilterOptions(
   params: DashboardEventFilterOptionsParams,
   actor: ActorHeaders & { companyId: string }
@@ -279,18 +327,36 @@ export async function getDashboardEventFilterOptions(
   return data;
 }
 
+export type DashboardExportFiltersSummary = {
+  from?: string;
+  to?: string;
+  category?: string;
+  action?: string;
+  workspaceId?: string;
+};
+
+export interface DashboardExportJobSummary {
+  id: string;
+  status: string;
+  source: string;
+  format: string;
+  rowLimit: string;
+  rowsExported: string;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+  errorCode?: string | null;
+  failureSummary?: string | null;
+  requestedByType: string;
+  requestedById: string | null;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  explorerDashboardWorkspaceId: string | null;
+  filtersSummary: DashboardExportFiltersSummary;
+}
+
 export interface DashboardExportsResponse {
-  jobs: Array<{
-    id: string;
-    status: string;
-    source: string;
-    format: string;
-    rowLimit: string;
-    rowsExported: string;
-    createdAt: string;
-    finishedAt?: string;
-    errorCode?: string | null;
-  }>;
+  jobs: DashboardExportJobSummary[];
 }
 
 export async function getDashboardExports(
@@ -299,6 +365,234 @@ export async function getDashboardExports(
   const { data } = await hyrelogRequest<DashboardExportsResponse>(
     `${DASHBOARD_PREFIX}/exports`,
     { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export interface DashboardExportJobDetail extends DashboardExportJobSummary {
+  downloadHint: 'ready_to_stream' | 'in_progress' | 'completed_no_repeat_download' | 'unavailable';
+  evidence: { jobId: string; companyScoped: boolean; requestedVia: 'dashboard' | 'api' };
+}
+
+export async function getDashboardExportJob(
+  jobId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardExportJobDetail> {
+  const { data } = await hyrelogRequest<DashboardExportJobDetail>(
+    `${DASHBOARD_PREFIX}/exports/${encodeURIComponent(jobId)}`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+/** Response from GET /dashboard/exports/capabilities (no side effects). */
+export interface DashboardExportCapabilitiesResponse {
+  createFilteredExport: boolean;
+}
+
+export async function getDashboardExportCapabilities(
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardExportCapabilitiesResponse> {
+  const { data } = await hyrelogRequest<DashboardExportCapabilitiesResponse>(
+    `${DASHBOARD_PREFIX}/exports/capabilities`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export type DashboardExportCreateBody = {
+  format: 'JSONL' | 'CSV';
+  filters?: {
+    from?: string;
+    to?: string;
+    category?: string;
+    action?: string;
+    workspaceId?: string;
+  };
+  limit?: number;
+  /** Merged with saved view query on API (body filters override). */
+  savedExplorerViewId?: string;
+};
+
+export async function createDashboardExport(
+  body: DashboardExportCreateBody,
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ jobId: string; status: string }> {
+  const { data } = await hyrelogRequest<{ jobId: string; status: string }>(`${DASHBOARD_PREFIX}/exports`, {
+    method: 'POST',
+    body: body as unknown as Record<string, unknown>,
+    actor: { ...actor, companyId: actor.companyId },
+  });
+  return data;
+}
+
+export type SavedExplorerViewSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  workspaceId: string | null;
+  isDefault: boolean;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SavedExplorerViewDetail = SavedExplorerViewSummary & {
+  query: Record<string, unknown>;
+};
+
+export interface SavedExplorerViewsListResponse {
+  views: SavedExplorerViewSummary[];
+}
+
+export async function getSavedExplorerViews(
+  actor: ActorHeaders & { companyId: string }
+): Promise<SavedExplorerViewsListResponse> {
+  const { data } = await hyrelogRequest<SavedExplorerViewsListResponse>(
+    `${DASHBOARD_PREFIX}/explorer/views`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function getSavedExplorerView(
+  viewId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ view: SavedExplorerViewDetail }> {
+  const { data } = await hyrelogRequest<{ view: SavedExplorerViewDetail }>(
+    `${DASHBOARD_PREFIX}/explorer/views/${encodeURIComponent(viewId)}`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function createSavedExplorerView(
+  body: {
+    name: string;
+    description?: string;
+    query: unknown;
+    workspaceId?: string | null;
+    isDefault?: boolean;
+  },
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ view: SavedExplorerViewDetail }> {
+  const { data } = await hyrelogRequest<{ view: SavedExplorerViewDetail }>(
+    `${DASHBOARD_PREFIX}/explorer/views`,
+    {
+      method: 'POST',
+      body: body as unknown as Record<string, unknown>,
+      actor: { ...actor, companyId: actor.companyId },
+    }
+  );
+  return data;
+}
+
+export async function updateSavedExplorerView(
+  viewId: string,
+  body: {
+    name?: string;
+    description?: string | null;
+    query?: unknown;
+    workspaceId?: string | null;
+    isDefault?: boolean;
+  },
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ view: SavedExplorerViewDetail }> {
+  const { data } = await hyrelogRequest<{ view: SavedExplorerViewDetail }>(
+    `${DASHBOARD_PREFIX}/explorer/views/${encodeURIComponent(viewId)}`,
+    {
+      method: 'PATCH',
+      body: body as unknown as Record<string, unknown>,
+      actor: { ...actor, companyId: actor.companyId },
+    }
+  );
+  return data;
+}
+
+export async function deleteSavedExplorerView(
+  viewId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<void> {
+  await hyrelogRequest<unknown>(
+    `${DASHBOARD_PREFIX}/explorer/views/${encodeURIComponent(viewId)}`,
+    { method: 'DELETE', actor: { ...actor, companyId: actor.companyId } }
+  );
+}
+
+export type RunSavedExplorerViewResponse = {
+  view: Pick<SavedExplorerViewSummary, 'id' | 'name' | 'description' | 'workspaceId' | 'isDefault'>;
+  query: Record<string, unknown>;
+};
+
+export async function runSavedExplorerView(
+  viewId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<RunSavedExplorerViewResponse> {
+  const { data } = await hyrelogRequest<RunSavedExplorerViewResponse>(
+    `${DASHBOARD_PREFIX}/explorer/views/${encodeURIComponent(viewId)}/run`,
+    { method: 'POST', actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function rerunDashboardExport(
+  jobId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ jobId: string; status: string }> {
+  const { data } = await hyrelogRequest<{ jobId: string; status: string }>(
+    `${DASHBOARD_PREFIX}/exports/${encodeURIComponent(jobId)}/rerun`,
+    { method: 'POST', actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export type DashboardExportTemplateSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  format: string;
+  source: string;
+  workspaceId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export interface DashboardExportTemplatesResponse {
+  templates: DashboardExportTemplateSummary[];
+}
+
+export async function getDashboardExportTemplates(
+  actor: ActorHeaders & { companyId: string }
+): Promise<DashboardExportTemplatesResponse> {
+  const { data } = await hyrelogRequest<DashboardExportTemplatesResponse>(
+    `${DASHBOARD_PREFIX}/export-templates`,
+    { actor: { ...actor, companyId: actor.companyId } }
+  );
+  return data;
+}
+
+export async function saveDashboardExportTemplateFromJob(
+  body: { sourceJobId: string; name: string; description?: string | null },
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ template: DashboardExportTemplateSummary }> {
+  const { data } = await hyrelogRequest<{ template: DashboardExportTemplateSummary }>(
+    `${DASHBOARD_PREFIX}/export-templates`,
+    {
+      method: 'POST',
+      body: body as unknown as Record<string, unknown>,
+      actor: { ...actor, companyId: actor.companyId },
+    }
+  );
+  return data;
+}
+
+export async function runDashboardExportTemplate(
+  templateId: string,
+  actor: ActorHeaders & { companyId: string }
+): Promise<{ jobId: string; status: string }> {
+  const { data } = await hyrelogRequest<{ jobId: string; status: string }>(
+    `${DASHBOARD_PREFIX}/export-templates/${encodeURIComponent(templateId)}/run`,
+    { method: 'POST', actor: { ...actor, companyId: actor.companyId } }
   );
   return data;
 }

@@ -6,7 +6,8 @@ import { DashboardSessionProvider } from '@/lib/dashboard/session-context';
 import { requireDashboardAccess } from '@/lib/auth/requireDashboardAccess';
 import { prisma } from '@/lib/prisma';
 import { getCompanyAccess } from '@/lib/workspaces/access';
-import { listWorkspacesForCompany, listWorkspacesForUser } from '@/lib/workspaces/queries';
+import { listWorkspacesForCompany } from '@/lib/workspaces/queries';
+import { getCachedWorkspacesForDashboardUser } from '@/lib/dashboard/cached-workspaces';
 import type { User, Company, Workspace } from '@/types/dashboard';
 import { SubscriptionStatus } from '@/generated/prisma/client';
 import { getDashboardEvents } from '@/lib/hyrelog-api';
@@ -80,9 +81,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!access) redirect('/invites');
 
   const seeAllWorkspaces = access.canAdmin || access.canBilling;
+  // Workspace-only users: share cached membership query with home insights (same request).
   const workspacesRows = seeAllWorkspaces
     ? await listWorkspacesForCompany(session.company.id)
-    : await listWorkspacesForUser(session.user.id);
+    : await getCachedWorkspacesForDashboardUser(session.user.id);
 
   const actor = {
     userId: session.user.id,

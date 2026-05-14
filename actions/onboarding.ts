@@ -23,6 +23,7 @@ import { findWorkspaceIdPendingProductOnboarding } from '@/lib/onboarding/eligib
 import { ONBOARDING_ACTIVATION_SUCCESS_COOKIE } from '@/lib/onboarding/constants';
 import { getDashboardEvents } from '@/lib/hyrelog-api';
 import { isHyreLogApiConfigured } from '@/lib/hyrelog-api/client';
+import { dashboardLog } from '@/lib/dashboard-logger';
 
 const onboardingWorkspaceDetailSelect = {
   id: true,
@@ -609,7 +610,7 @@ export async function skipOnboarding(input: z.infer<typeof SkipOnboardingSchema>
   try {
     await provisionWorkspaceAndStore(workspace.id, actor);
   } catch {
-    console.warn('HyreLog API provisioning after onboarding skip failed');
+    dashboardLog.warn('onboarding_skip_provision_failed', { workspaceId: workspace.id });
   }
 
   return { success: true as const, redirectTo: rt };
@@ -737,7 +738,9 @@ export async function checkOnboardingFirstEventAction(
       event: mapAuditEventSummary(data.events[0])
     };
   } catch (err) {
-    console.error('checkOnboardingFirstEventAction:', err);
+    dashboardLog.error('checkOnboardingFirstEventAction_failed', {
+      reason: err instanceof Error ? err.name : 'unknown',
+    });
     return { ok: false, error: 'Could not check events. Try again in a moment.' };
   }
 }
@@ -827,7 +830,9 @@ export async function completeOnboardingActivationAction(
     );
     eventCount = data.total;
   } catch (err) {
-    console.error('completeOnboardingActivationAction (list):', err);
+    dashboardLog.error('completeOnboardingActivationAction_events_failed', {
+      reason: err instanceof Error ? err.name : 'unknown',
+    });
     return { ok: false, error: 'Could not verify events. Try again in a moment.' };
   }
 

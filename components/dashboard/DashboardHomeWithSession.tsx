@@ -3,11 +3,15 @@
 import { DashboardHomeContent } from './DashboardHomeContent';
 import { useDashboardSession } from '@/lib/dashboard/session-context';
 import type { Project, Member, BillingInfo } from '@/types/dashboard';
+import type { DashboardHomeInsights } from '@/lib/dashboard/types';
 
 interface DashboardHomeWithSessionProps {
   projects: Project[];
   members: Member[];
   billingInfo?: BillingInfo;
+  insights: DashboardHomeInsights;
+  /** Resolved server-side scope for HyreLog + home UI (`null` = company overview for admins). */
+  workspaceFocusId: string | null;
 }
 
 /**
@@ -18,7 +22,9 @@ interface DashboardHomeWithSessionProps {
 export function DashboardHomeWithSession({
   projects,
   members,
-  billingInfo
+  billingInfo,
+  insights,
+  workspaceFocusId,
 }: DashboardHomeWithSessionProps) {
   const { company, workspaces, isCompanyAdmin } = useDashboardSession();
 
@@ -30,6 +36,8 @@ export function DashboardHomeWithSession({
       members={members}
       billingInfo={billingInfo}
       isCompanyAdmin={isCompanyAdmin}
+      insights={insights}
+      workspaceFocusId={workspaceFocusId}
     />
   );
 }

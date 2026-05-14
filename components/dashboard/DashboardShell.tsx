@@ -85,7 +85,9 @@ export function DashboardShell({
           onToggleSidebar={() => setIsMobileSidebarOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-linear-to-b from-background via-background to-muted/30 dark:to-muted/10">
+          {children}
+        </main>
       </div>
     </div>
   );
