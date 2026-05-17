@@ -2,7 +2,7 @@
 
 import { Menu, ChevronRight, LogOut, Settings, User } from 'lucide-react';
 
-import { useSession } from '@/lib/auth-client';
+import { signOut, useSession } from '@/lib/auth-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
@@ -75,6 +75,20 @@ export function AppTopbar({
         user.email[0]?.toUpperCase()) ??
       '?')
     : '?';
+
+  async function handleSignOut() {
+    try {
+      await signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            window.location.assign('/auth/login');
+          },
+        },
+      });
+    } catch {
+      window.location.assign('/auth/login');
+    }
+  }
 
   return (
     <header className="h-16 sm:h-20 border-b border-border bg-card flex items-center justify-between px-4 sm:px-6">
@@ -173,7 +187,13 @@ export function AppTopbar({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer text-destructive">
+            <DropdownMenuItem
+              className="cursor-pointer text-destructive focus:text-destructive"
+              onSelect={(event) => {
+                event.preventDefault();
+                void handleSignOut();
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sign out</span>
             </DropdownMenuItem>
